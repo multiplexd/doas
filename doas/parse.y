@@ -24,6 +24,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <err.h>
+#include <stdlib.h>
+#include <bsd/stdlib.h>
 
 #include "doas.h"
 
