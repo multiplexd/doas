@@ -16,16 +16,16 @@
  */
 
 #include <sys/types.h>
-//#include <sys/tree.h>
-#include <bsd/sys/tree.h>
 
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <bsd/stdlib.h>
 #include <err.h>
 #include <unistd.h>
 #include <errno.h>
+
+#include "bsd-compat/compat.h"
+#include "bsd-compat/sys-tree.h"
 
 #include "doas.h"
 
@@ -46,8 +46,7 @@ envcmp(struct envnode *a, struct envnode *b)
 	return strcmp(a->key, b->key);
 }
 
-//RB_GENERATE_STATIC(envtree, envnode, node, envcmp) /* libbsd doesn't like this */
-RB_GENERATE(envtree, envnode, node, envcmp)
+RB_GENERATE_STATIC(envtree, envnode, node, envcmp)
 
 static struct envnode *
 createnode(const char *key, const char *value)

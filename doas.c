@@ -20,16 +20,10 @@
 #include <sys/ioctl.h>
 
 #include <limits.h>
-//#include <login_cap.h>
-//#include <bsd_auth.h>
-#include <bsd/readpassphrase.h>
 #include <string.h>
-#include <bsd/string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <bsd/stdlib.h>
 #include <err.h>
-#include <bsd/err.h>
 #include <unistd.h>
 #include <bsd/unistd.h>
 #include <pwd.h>
@@ -38,7 +32,8 @@
 #include <errno.h>
 #include <fcntl.h>
 
-#include "compat.h"
+#include "bsd-compat/compat.h"
+#include "shadowauth/shadowauth.h"
 #include "doas.h"
 
 void
