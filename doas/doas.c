@@ -20,23 +20,28 @@
 #include <sys/ioctl.h>
 
 #include <limits.h>
-#include <login_cap.h>
-#include <bsd_auth.h>
-#include <readpassphrase.h>
+//#include <login_cap.h>
+//#include <bsd_auth.h>
+#include <bsd/readpassphrase.h>
 #include <string.h>
+#include <bsd/string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <bsd/stdlib.h>
 #include <err.h>
+#include <bsd/err.h>
 #include <unistd.h>
+#include <bsd/unistd.h>
 #include <pwd.h>
 #include <grp.h>
 #include <syslog.h>
 #include <errno.h>
 #include <fcntl.h>
 
+#include "compat.h"
 #include "doas.h"
 
-static void __dead
+void
 usage(void)
 {
 	fprintf(stderr, "usage: doas [-Lns] [-a style] [-C config] [-u user]"
@@ -172,7 +177,7 @@ parseconfig(const char *filename, int checkperms)
 		exit(1);
 }
 
-static void __dead
+void
 checkconfig(const char *confpath, int argc, char **argv,
     uid_t uid, gid_t *groups, int ngroups, uid_t target)
 {
@@ -197,27 +202,26 @@ static void
 authuser(char *myname, char *login_style, int persist)
 {
 	char *challenge = NULL, *response, rbuf[1024], cbuf[128];
-	auth_session_t *as;
-	int fd = -1;
+	//int fd = -1;
 
-	if (persist)
+/*	if (persist)
 		fd = open("/dev/tty", O_RDWR);
 	if (fd != -1) {
 		if (ioctl(fd, TIOCCHKVERAUTH) == 0)
 			goto good;
-	}
+	} */
 
-	if (!(as = auth_userchallenge(myname, login_style, "auth-doas",
+/*	if (!(as = auth_userchallenge(myname, login_style, "auth-doas",
 	    &challenge)))
 		errx(1, "Authorization failed");
-	if (!challenge) {
+	if (!challenge) { */
 		char host[HOST_NAME_MAX + 1];
 		if (gethostname(host, sizeof(host)))
 			snprintf(host, sizeof(host), "?");
 		snprintf(cbuf, sizeof(cbuf),
 		    "\rdoas (%.32s@%.32s) password: ", myname, host);
 		challenge = cbuf;
-	}
+/*	}*/
 	response = readpassphrase(challenge, rbuf, sizeof(rbuf),
 	    RPP_REQUIRE_TTY);
 	if (response == NULL && errno == ENOTTY) {
@@ -225,18 +229,20 @@ authuser(char *myname, char *login_style, int persist)
 		    "tty required for %s", myname);
 		errx(1, "a tty is required");
 	}
-	if (!auth_userresponse(as, response, 0)) {
+	/*if (!auth_userresponse(as, response, 0)) {*/
+	if(shadowauth(myname, response) != 0) {
 		syslog(LOG_AUTHPRIV | LOG_NOTICE,
 		    "failed auth for %s", myname);
 		errc(1, EPERM, NULL);
 	}
 	explicit_bzero(rbuf, sizeof(rbuf));
+/*
 good:
 	if (fd != -1) {
 		int secs = 5 * 60;
-		ioctl(fd, TIOCSETVERAUTH, &secs);
+//		ioctl(fd, TIOCSETVERAUTH, &secs);
 		close(fd);
-	}
+        } */
 }
 
 int
@@ -279,10 +285,11 @@ main(int argc, char **argv)
 			confpath = optarg;
 			break;
 		case 'L':
-			i = open("/dev/tty", O_RDWR);
+/*			i = open("/dev/tty", O_RDWR);
 			if (i != -1)
 				ioctl(i, TIOCCLRVERAUTH);
-			exit(i == -1);
+			exit(i == -1); */
+		        exit(0); /* NOOP */
 		case 'u':
 			if (parseuid(optarg, &target) != 0)
 				errx(1, "unknown user");
@@ -371,10 +378,10 @@ main(int argc, char **argv)
 	if (!pw)
 		errx(1, "no passwd entry for target");
 
-	if (setusercontext(NULL, pw, target, LOGIN_SETGROUP |
+/*	if (setusercontext(NULL, pw, target, LOGIN_SETGROUP |
 	    LOGIN_SETPRIORITY | LOGIN_SETRESOURCES | LOGIN_SETUMASK |
 	    LOGIN_SETUSER) != 0)
-		errx(1, "failed to set user context for target");
+	    errx(1, "failed to set user context for target"); */
 
 	if (pledge("stdio rpath exec", NULL) == -1)
 		err(1, "pledge");
