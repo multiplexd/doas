@@ -15,6 +15,6 @@ int pledge (const char *promises, const char *paths[]);
 void *reallocarray(void *, size_t, size_t);
 void errc(int, int, const char *, ...);
 void closefrom(int);
-setprogname(const char *);
+void setprogname(const char *);
 
 #endif /* _BSD_COMPAT_H */
