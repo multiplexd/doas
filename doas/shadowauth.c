@@ -4,6 +4,8 @@
 #include <string.h>
 #include <bsd/string.h>
 
+/* The parsing of the salt done here is NOT portable! */
+
 int shadowauth(const char *u, const char *p) {
    struct spwd *spw = NULL;
    char *salt = (char*) calloc(20, sizeof(char));
