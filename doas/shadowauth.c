@@ -1,5 +1,7 @@
 #include <crypt.h>
 #include <shadow.h>
+#include <stdlib.h>
+#include <string.h>
 
 int shadowauth(const char *u, const char *p) {
    struct spwd *spw = NULL;
