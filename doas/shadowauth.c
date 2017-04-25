@@ -2,15 +2,12 @@
 #include <shadow.h>
 #include <stdlib.h>
 #include <string.h>
-#include <bsd/string.h>
 
 int shadowauth(const char *u, const char *p) {
    struct spwd *spw = NULL;
    char *res = NULL;
    
    if ((spw = getspnam(u)) != NULL) {
-      strlcat(salt, spw->sp_pwdp, 21);
-
       // crypt can use the salt from a previous encrypted password
       res = crypt(p, spw->sp_pwdp); 
       if(strcmp(res, spw->sp_pwdp) != 0) {
