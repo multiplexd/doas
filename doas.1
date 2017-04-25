@@ -72,6 +72,10 @@ No command is executed.
 Clear any persisted authorizations from previous invocations,
 then immediately exit.
 No command is executed.
+.Ic Note:
+the
+.Ar persist
+configuration options is not implemented, so passing this flag results in a no-op.
 .It Fl n
 Non interactive mode, fail if
 .Nm
@@ -112,3 +116,6 @@ command first appeared in
 .Ox 5.8 .
 .Sh AUTHORS
 .An Ted Unangst Aq Mt tedu@openbsd.org
+(OpenBSD original)
+.An multiplex'd Aq Mt multiplexd@gmx.com
+(Linux port)
