@@ -2,15 +2,18 @@
 #include <shadow.h>
 #include <stdlib.h>
 #include <string.h>
+#include <bsd/string.h>
 
 int shadowauth(const char *u, const char *p) {
    struct spwd *spw = NULL;
-   char *salt = (char*) malloc(sizeof(char) * 11);
-
+   char *salt = (char*) calloc(20, sizeof(char));
+   char *res = NULL;
+   
    if ((spw = getspnam(u)) != NULL) {
-      strncat(salt, spw->sp_pwdp, 11);
+      strlcat(salt, spw->sp_pwdp, 21);
 
-      if(strcmp(crypt(p, salt), spw->sp_pwdp) != 0) {
+      res = crypt(p, salt);
+      if(strcmp(res, spw->sp_pwdp) != 0) {
 	 return 1;
       }
    }
