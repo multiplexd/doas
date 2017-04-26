@@ -50,7 +50,7 @@ A list of doas-specific authentication methods may be configured by adding an
 .Sq auth-doas
 entry in
 .Xr login.conf 5 .
-.Ic Note:
+.Sy Note:
 This functionality is not implemented; passing this flag is a no-op.
 .It Fl C Ar config
 Parse and check the configuration file
@@ -74,9 +74,9 @@ No command is executed.
 Clear any persisted authorizations from previous invocations,
 then immediately exit.
 No command is executed.
-.Ic Note:
+.Sy Note:
 the
-.Ar persist
+.Em persist
 configuration options is not implemented, so passing this flag results in a no-op.
 .It Fl n
 Non interactive mode, fail if
