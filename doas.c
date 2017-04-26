@@ -279,6 +279,9 @@ main(int argc, char **argv)
 	if (strlcpy(myname, pw->pw_name, sizeof(myname)) >= sizeof(myname))
 		errx(1, "pw_name too long");
 
+	if (geteuid())
+		errx(1, "not installed setuid");
+
 	while ((ch = getopt(argc, argv, "a:C:Lnsu:")) != -1) {
 		switch (ch) {
 		case 'a':
@@ -340,9 +343,6 @@ main(int argc, char **argv)
 		    target);
 		exit(1);	/* fail safe */
 	}
-
-	if (geteuid())
-		errx(1, "not installed setuid");
 
 	parseconfig("/etc/doas.conf", 1);
 
