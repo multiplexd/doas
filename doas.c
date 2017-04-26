@@ -33,7 +33,7 @@
 #include <fcntl.h>
 
 #include "bsd-compat/compat.h"
-#include "shadowauth/shadowauth.h"
+#include "shadowauth.h"
 #include "doas.h"
 
 void
