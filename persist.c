@@ -23,12 +23,12 @@ int make_auth_file_path(char *path, char *myname, char *tty) {
    char *pathtmp = NULL;
 
    /* Copy the local path of the tty name minus the leading slash */
-   tty_clobbered = malloc(sizeof(tty) - 1);
+   tty_clobbered = malloc(strlen(tty) - 1);
    if (tty_clobbered == NULL) {
       return -1;
    }
 
-   if (strlcpy(tty_clobbered, tty + 1, sizeof(tty_clobbered)) >= sizeof(tty_clobbered)) {
+   if (strlcpy(tty_clobbered, tty + 1, strlen(tty + 1) + 1) >= strlen(tty + 1) + 1) {
       free(tty_clobbered);
       return -1;
    }
@@ -54,7 +54,7 @@ int make_auth_file_path(char *path, char *myname, char *tty) {
 
    /* Discard the return value as we know we are copying less than or
       equal to PATH_MAX bytes */
-   (void) strlcpy(path, pathtmp, sizeof(path));
+   (void) strlcpy(path, pathtmp, strlen(pathtmp) + 1);
 
    free(pathtmp);
    free(tty_clobbered);
@@ -73,7 +73,7 @@ int check_dir(const char *dir) {
       return -1;
    }
 
-   if (dirinfo.st_uid != 0 || dirinfo.st_gid != 0 || dirinfo.st_mode != 0700) {
+   if (dirinfo.st_uid != 0 || dirinfo.st_gid != 0 || dirinfo.st_mode != (S_IRWXU | S_IFDIR)) {
       return -1;
    }
 
@@ -89,13 +89,14 @@ int persist_check(char *myname, int *authfd) {
    char *tty = NULL;
    char token_file[PATH_MAX];
    int fd;
-   time_t now;
+   time_t now, diff;
    
    if (check_dir(state_dir) == -1) {
       return -1;
    }
 
-   if ((tty = ttyname(STDIN_FILENO)) == NULL) {
+   tty = ttyname(STDIN_FILENO);
+   if (tty == NULL) {
       return -1;
    }
 
@@ -126,24 +127,27 @@ int persist_check(char *myname, int *authfd) {
 
    /* Make sure that the permissions of the auth token file are what
       we expect */
-   if (fileinfo.st_uid != 0 || fileinfo.st_gid != 0 || fileinfo.st_mode != 0600) {
+   if (fileinfo.st_uid != 0 || fileinfo.st_gid != 0 ||
+       fileinfo.st_mode != (S_IRUSR | S_IWUSR | S_IFREG)) {
+
       close(fd);
       return -1;
    }
    
    now = time(NULL);
-   if (now = -1) {
+   if (now == -1) {
       close(fd);
       return -1;
    }
 
    *authfd = fd;
-   
+
    /* Check if the auth token is valid */
-   if (now - fileinfo.st_mtim.tv_sec <= (time_t) 300) {
-      return 0;
-   } else {
+   diff = now - fileinfo.st_mtim.tv_sec;
+   if(diff < 0) {
       return 1;
+   } else if (diff < 300) {
+      return 0;
    }
 }
 

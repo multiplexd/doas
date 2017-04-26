@@ -294,7 +294,7 @@ main(int argc, char **argv)
 			i = open("/dev/tty", O_RDWR);
 			if (i != -1) 
 				i = persist_remove(myname);
-			if (i != -1)
+			if (i == -1)
 			        errx(1, "could not clear auth token");
 			exit(0); 
 		case 'u':
