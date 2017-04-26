@@ -74,10 +74,6 @@ No command is executed.
 Clear any persisted authorizations from previous invocations,
 then immediately exit.
 No command is executed.
-.Sy Note:
-the
-.Em persist
-configuration options is not implemented, so passing this flag results in a no-op.
 .It Fl n
 Non interactive mode, fail if
 .Nm
@@ -107,6 +103,8 @@ The user attempted to run a command which is not permitted.
 The password was incorrect.
 .It
 The specified command was not found or is not executable.
+.It
+There was a problem clearing an existing authentication token (when using the -L flag).
 .El
 .Sh SEE ALSO
 .Xr su 1 ,
