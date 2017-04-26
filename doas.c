@@ -25,7 +25,6 @@
 #include <stdlib.h>
 #include <err.h>
 #include <unistd.h>
-#include <bsd/unistd.h>
 #include <pwd.h>
 #include <grp.h>
 #include <syslog.h>
@@ -198,6 +197,7 @@ static void
 authuser(char *myname, char *login_style, int persist)
 {
 	char *challenge = NULL, *response, rbuf[1024], cbuf[128];
+	char host[HOST_NAME_MAX + 1];
 	int ttyfd = -1;
 	int authfd = -1;
 	int ret = -1;
@@ -210,17 +210,12 @@ authuser(char *myname, char *login_style, int persist)
 		        goto good;
 	}
 
-/*	if (!(as = auth_userchallenge(myname, login_style, "auth-doas",
-	    &challenge)))
-		errx(1, "Authorization failed");
-	if (!challenge) { */
-		char host[HOST_NAME_MAX + 1];
-		if (gethostname(host, sizeof(host)))
-			snprintf(host, sizeof(host), "?");
-		snprintf(cbuf, sizeof(cbuf),
-		    "\rdoas (%.32s@%.32s) password: ", myname, host);
-		challenge = cbuf;
-/*	}*/
+	if (gethostname(host, sizeof(host)))
+   	        snprintf(host, sizeof(host), "?");
+	snprintf(cbuf, sizeof(cbuf),
+		 "\rdoas (%.32s@%.32s) password: ", myname, host);
+	challenge = cbuf;
+
 	response = readpassphrase(challenge, rbuf, sizeof(rbuf),
 	    RPP_REQUIRE_TTY);
 	if (response == NULL && errno == ENOTTY) {
@@ -228,7 +223,7 @@ authuser(char *myname, char *login_style, int persist)
 		    "tty required for %s", myname);
 		errx(1, "a tty is required");
 	}
-	/*if (!auth_userresponse(as, response, 0)) {*/
+
 	if(shadowauth(myname, response) != 0) {
 		syslog(LOG_AUTHPRIV | LOG_NOTICE,
 		    "failed auth for %s", myname);
@@ -381,11 +376,6 @@ main(int argc, char **argv)
 	pw = getpwuid(target);
 	if (!pw)
 		errx(1, "no passwd entry for target");
-
-/*	if (setusercontext(NULL, pw, target, LOGIN_SETGROUP |
-	    LOGIN_SETPRIORITY | LOGIN_SETRESOURCES | LOGIN_SETUMASK |
-	    LOGIN_SETUSER) != 0)
-	    errx(1, "failed to set user context for target"); */
 
 	if (pledge("stdio rpath exec", NULL) == -1)
 		err(1, "pledge");
