@@ -34,6 +34,7 @@
 
 #include "bsd-compat/compat.h"
 #include "shadowauth.h"
+#include "persist.h"
 #include "doas.h"
 
 void
@@ -197,14 +198,17 @@ static void
 authuser(char *myname, char *login_style, int persist)
 {
 	char *challenge = NULL, *response, rbuf[1024], cbuf[128];
-	//int fd = -1;
+	int ttyfd = -1;
+	int authfd = -1;
+	int ret = -1;
 
-/*	if (persist)
-		fd = open("/dev/tty", O_RDWR);
-	if (fd != -1) {
-		if (ioctl(fd, TIOCCHKVERAUTH) == 0)
-			goto good;
-	} */
+	if (persist)
+		ttyfd = open("/dev/tty", O_RDWR);
+	if (ttyfd != -1) {
+	        ret = persist_check(myname, &authfd);
+		if(ret == 0) 
+		        goto good;
+	}
 
 /*	if (!(as = auth_userchallenge(myname, login_style, "auth-doas",
 	    &challenge)))
@@ -231,13 +235,13 @@ authuser(char *myname, char *login_style, int persist)
 		errc(1, EPERM, NULL);
 	}
 	explicit_bzero(rbuf, sizeof(rbuf));
-/*
+
 good:
-	if (fd != -1) {
-		int secs = 5 * 60;
-//		ioctl(fd, TIOCSETVERAUTH, &secs);
-		close(fd);
-        } */
+	if (ttyfd != -1 && ret != -1) {
+	        persist_update(authfd);
+		close(authfd);
+		close(ttyfd);
+        } 
 }
 
 int
@@ -271,6 +275,15 @@ main(int argc, char **argv)
 
 	uid = getuid();
 
+	/* Need to find out the name of the calling user before option
+	   processing takes place in case we are resetting auth
+	   tokens. */
+	pw = getpwuid(uid);
+	if (!pw)
+		err(1, "getpwuid failed");
+	if (strlcpy(myname, pw->pw_name, sizeof(myname)) >= sizeof(myname))
+		errx(1, "pw_name too long");
+
 	while ((ch = getopt(argc, argv, "a:C:Lnsu:")) != -1) {
 		switch (ch) {
 		case 'a':
@@ -280,11 +293,12 @@ main(int argc, char **argv)
 			confpath = optarg;
 			break;
 		case 'L':
-/*			i = open("/dev/tty", O_RDWR);
+			i = open("/dev/tty", O_RDWR);
+			if (i != -1) 
+				i = persist_remove(myname);
 			if (i != -1)
-				ioctl(i, TIOCCLRVERAUTH);
-			exit(i == -1); */
-		        exit(0); /* NOOP */
+			        errx(1, "could not clear auth token");
+			exit(0); 
 		case 'u':
 			if (parseuid(optarg, &target) != 0)
 				errx(1, "unknown user");
@@ -309,11 +323,6 @@ main(int argc, char **argv)
 	} else if ((!sflag && !argc) || (sflag && argc))
 		usage();
 
-	pw = getpwuid(uid);
-	if (!pw)
-		err(1, "getpwuid failed");
-	if (strlcpy(myname, pw->pw_name, sizeof(myname)) >= sizeof(myname))
-		errx(1, "pw_name too long");
 	ngroups = getgroups(NGROUPS_MAX, groups);
 	if (ngroups == -1)
 		err(1, "can't get groups");
