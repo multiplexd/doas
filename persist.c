@@ -157,7 +157,8 @@ int persist_remove(char *myname) {
    const char *state_dir = DOAS_STATE_DIR;
    char *tty = NULL;
    char token_file[PATH_MAX];
-
+   int ret;
+   
    if ((tty = ttyname(STDIN_FILENO)) == NULL) {
       return -1;
    }
@@ -166,5 +167,10 @@ int persist_remove(char *myname) {
       return -1;
    }
 
+   ret = access(token_file, F_OK);
+   if (ret == -1 && errno == ENOENT) {
+      return 0;
+   }
+   
    return unlink(token_file);
 }
