@@ -198,6 +198,7 @@ authuser(char *myname, char *login_style, int persist)
 {
 	char *challenge = NULL, *response, rbuf[1024], cbuf[128];
 	char host[HOST_NAME_MAX + 1];
+	char path[PATH_MAX]; /* In case tokens need to be deleted due to failed auth */
 	int ttyfd = -1;
 	int authfd = -1;
 	int ret = -1;
@@ -205,9 +206,9 @@ authuser(char *myname, char *login_style, int persist)
 	if (persist)
 		ttyfd = open("/dev/tty", O_RDWR);
 	if (ttyfd != -1) {
-	        ret = persist_check(myname, &authfd);
+	        ret = persist_check(myname, &authfd, path);
 		if(ret == 0) 
-		        goto good;
+		       goto good;
 	}
 
 	if (gethostname(host, sizeof(host)))
@@ -221,16 +222,23 @@ authuser(char *myname, char *login_style, int persist)
 	if (response == NULL && errno == ENOTTY) {
 		syslog(LOG_AUTHPRIV | LOG_NOTICE,
 		    "tty required for %s", myname);
+		if (ret == 1)
+		        unlink(path); 
 		errx(1, "a tty is required");
 	}
 
 	if(shadowauth(myname, response) != 0) {
 		syslog(LOG_AUTHPRIV | LOG_NOTICE,
 		    "failed auth for %s", myname);
+		if (ret == 1)
+		        unlink(path);
 		errc(1, EPERM, NULL);
 	}
+#ifndef NO_EXPLICIT_BZERO
 	explicit_bzero(rbuf, sizeof(rbuf));
-
+#else
+	memset(rbuf, 0, sizeof(rbuf));
+#endif
 good:
 	if (ttyfd != -1 && ret != -1) {
 	        persist_update(authfd);

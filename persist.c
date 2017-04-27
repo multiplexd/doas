@@ -81,9 +81,11 @@ int check_dir(const char *dir) {
 }
 
 /* Return values: -1 on error, 0 on successful auth file access with
-   valid token, 1 on successful auth file access with invalid auth 
-   token */
-int persist_check(char *myname, int *authfd) {
+   valid token, 1 on successful auth file access with invalid auth
+   token. We also make a copy of the path of the auth file when
+   returning 1 so we have a path to unlink if the user doesn't
+   authenticate to update their auth token */
+int persist_check(char *myname, int *authfd, char *path) {
    const char *state_dir = DOAS_STATE_DIR;
    struct stat fileinfo;
    char *tty = NULL;
@@ -114,7 +116,8 @@ int persist_check(char *myname, int *authfd) {
       }
 
       *authfd = fd;
-
+      (void) strlcpy(path, token_file, strlen(token_file) + 1);
+      
       /* If we had to create the auth file then there's no
          pre-existing auth token that can be valid */
       return 1;
@@ -145,6 +148,7 @@ int persist_check(char *myname, int *authfd) {
    /* Check if the auth token is valid */
    diff = now - fileinfo.st_mtim.tv_sec;
    if(diff < 0) {
+      (void) strlcpy(path, token_file, strlen(token_file) + 1);
       return 1;
    } else if (diff < 300) {
       return 0;
