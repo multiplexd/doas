@@ -147,10 +147,10 @@ int persist_check(char *myname, int *authfd, char *path) {
 
    /* Check if the auth token is valid */
    diff = now - fileinfo.st_mtim.tv_sec;
-   if(diff < 0) {
+   if(diff < 0 || diff > 300) {
       (void) strlcpy(path, token_file, strlen(token_file) + 1);
       return 1;
-   } else if (diff < 300) {
+   } else if (diff <= 300) {
       return 0;
    }
 }
