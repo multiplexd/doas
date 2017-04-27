@@ -18,6 +18,10 @@
 #define DOAS_STATE_DIR "/var/lib/doas"
 #endif
 
+#ifndef DOAS_PERSIST_TIMEOUT
+#define DOAS_PERSIST_TIMEOUT 300 /* Five minutes */
+#endif
+
 int make_auth_file_path(char *path, char *myname, char *tty) {
    const char *state_dir = DOAS_STATE_DIR;
    char *slash = NULL;
@@ -149,7 +153,7 @@ int persist_check(char *myname, int *authfd, char *path) {
 
    /* Check if the auth token is valid */
    diff = now - fileinfo.st_mtim.tv_sec;
-   if(diff < 0 || diff > 300) {
+   if(diff < 0 || diff > DOAS_PERSIST_TIMEOUT) {
       (void) strlcpy(path, token_file, strlen(token_file) + 1);
       return 1;
    } else if (diff <= 300) {
