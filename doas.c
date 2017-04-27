@@ -409,10 +409,10 @@ main(int argc, char **argv)
 	/* This is definitely a hack, but I don't know of any other way to do this cleanly */
 	if (initgroups(pw->pw_name, pw->pw_gid) == -1)
 	        err(1, "failed to set supplementary groups for '%s'", pw->pw_name);
-	if (setresuid(target, target, target) == -1)
-	        err(1, "failed to change to uid of '%s'", pw->pw_name);
 	if (setresgid(pw->pw_gid, pw->pw_gid, pw->pw_gid) == -1)
 	        err(1, "failed to change to gid of '%s'", pw->pw_name);
+	if (setresuid(target, target, target) == -1)
+	        err(1, "failed to change to uid of '%s'", pw->pw_name);
 
 	execvpe(cmd, argv, envp);
 	if (errno == ENOENT)
