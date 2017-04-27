@@ -18,7 +18,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-extern const char *__progname;
+#include "compat.h"
 
 void
 setprogname(const char *progname)

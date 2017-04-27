@@ -8,6 +8,8 @@
 
 #include "readpassphrase.h"
 
+extern const char *__progname;
+
 long long strtonum(const char *, long long, long long, const char **);
 size_t strlcpy(char *dst, const char *src, size_t siz);
 size_t strlcat(char *dst, const char *src, size_t siz);
