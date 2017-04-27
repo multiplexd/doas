@@ -363,6 +363,10 @@ main(int argc, char **argv)
 			break;
 	}
 
+#ifdef NEED_LOG_PID
+	openlog(__progname, LOG_PID, LOG_AUTHPRIV | LOG_NOTICE);
+#endif
+	
 	cmd = argv[0];
 	if (!permit(uid, groups, ngroups, &rule, target, cmd,
 	    (const char **)argv + 1)) {
