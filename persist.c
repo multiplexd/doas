@@ -14,7 +14,9 @@
 #include "bsd-compat/compat.h"
 #include "persist.h"
 
+#ifndef DOAS_STATE_DIR
 #define DOAS_STATE_DIR "/var/lib/doas"
+#endif
 
 int make_auth_file_path(char *path, char *myname, char *tty) {
    const char *state_dir = DOAS_STATE_DIR;
