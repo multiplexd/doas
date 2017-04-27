@@ -104,8 +104,27 @@ The password was incorrect.
 .It
 The specified command was not found or is not executable.
 .It
-There was a problem clearing an existing authentication token (when using the -L flag).
+There was a problem clearing an existing authentication token (when
+using the -L flag).
 .El
+.Sh FILES
+When configured using the
+.Ic persist
+configuration option,
+.Nm
+uses a state directory to store user authentication tokens. The
+default path for this directory is
+.Pa /var/lib/doas
+however this can be changed at compile time. This directory must be
+owned by user root and must only be readable and writable by root.
+.Nm
+will silently fail to store authentication tokens if the permissions
+on this directory are incorrect.
+
+.Nm
+also checks that the permissions on authentication token files are
+owned by root and only readable and writable by root and will silently
+fail to update authentication tokens if the permissions are incorrect.
 .Sh SEE ALSO
 .Xr su 1 ,
 .Xr doas.conf 5
