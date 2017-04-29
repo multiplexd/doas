@@ -1,13 +1,18 @@
+/* this file is a mess of declarations to make the BSD compat code work */
 
 #ifndef _BSD_COMPAT_H
 #define _BSD_COMPAT_H
 
+/* definitions taken from grepping around /usr/include on an amd64
+   OpenBSD 6.1 machine */
 #define _PW_NAME_LEN  31
 #define UID_MAX UINT_MAX
 #define GID_MAX UINT_MAX
 
+/* readpassphrase has its own declarations*/
 #include "readpassphrase.h"
 
+/* for setprogname */
 extern const char *__progname;
 
 long long strtonum(const char *, long long, long long, const char **);

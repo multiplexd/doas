@@ -1,3 +1,7 @@
+/* NOTE: This code was adapted from src/lib/libc/gen/setprogname.c in
+   OpenBSD's CVS repository using src/progname.c in freedesktop.org's
+   libbsd for reference. */
+
 /* $OpenBSD: setprogname.c,v 1.5 2016/03/13 18:34:20 guenther Exp $ */
 /*
  * Copyright (c) 2013 Antoine Jacoutot <ajacoutot@openbsd.org>

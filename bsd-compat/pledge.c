@@ -1,3 +1,6 @@
+/* NOTE: This code was taken from pledge_noop.c in
+   https://github.com/aperezdc/signify */
+
 /*
  * Copyright (c) 2015, Adrián Pérez de Castro <aperez@igalia.com>
  *

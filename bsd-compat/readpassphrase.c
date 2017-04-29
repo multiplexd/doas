@@ -1,3 +1,5 @@
+/* NOTE: This code was adapted from openbsd-compat/readpassphrase.c in OpenSSH */
+
 /*	$OpenBSD: readpassphrase.c,v 1.26 2016/10/18 12:47:18 millert Exp $	*/
 
 /*

@@ -1,3 +1,5 @@
+/* NOTE: This code was taken from openbsd-compat/errc.c in OpenSMTPD */
+
 /*	$OpenBSD: basename.c,v 1.14 2005/08/08 08:05:33 espie Exp $	*/
 
 /*
