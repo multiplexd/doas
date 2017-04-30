@@ -237,11 +237,9 @@ authuser(char *myname, char *login_style, int persist)
 		        unlink(path);
 		errc(1, EPERM, NULL);
 	}
-#ifndef NO_EXPLICIT_BZERO
-	explicit_bzero(rbuf, sizeof(rbuf));
-#else
+
 	memset(rbuf, 0, sizeof(rbuf));
-#endif
+
 good:
 	if (ttyfd != -1 && ret != -1) {
 	        persist_update(authfd);
