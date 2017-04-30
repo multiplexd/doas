@@ -15,6 +15,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+/* Adapted from the OpenBSD original for use on Linux systems by
+   multiplex'd <multiplexd@gmx.com> */
+
 #include <sys/types.h>
 
 #include <string.h>
