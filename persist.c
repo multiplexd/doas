@@ -64,9 +64,10 @@ int make_auth_file_path(char *path, char *myname, char *tty) {
       return -1;
    }
 
-   /* Discard the return value as we know we are copying less than or
-      equal to PATH_MAX bytes */
-   (void) strlcpy(path, pathtmp, sizeof(path));
+   if (strlcpy(path, pathtmp, PATH_MAX) >= PATH_MAX) {
+      free(pathtmp);
+      return -1;
+   }
 
    free(pathtmp);
    
@@ -117,7 +118,7 @@ int persist_check(char *myname, int *authfd, char *path) {
       return -1;
    }
 
-   if (strlcpy(path, token_file, sizeof(path)) >= sizeof(path)) {
+   if (strlcpy(path, token_file, PATH_MAX) >= PATH_MAX) {
       return -1;
    }
    
@@ -161,7 +162,7 @@ int persist_check(char *myname, int *authfd, char *path) {
 
    /* Check if the auth token is valid */
    diff = now - fileinfo.st_mtim.tv_sec;
-   if(diff < 0 || diff > DOAS_PERSIST_TIMEOUT) {
+   if(diff < 0 || diff > DOAS_PERSIST_TIMEOUT || !(diff <= DOAS_PERSIST_TIMEOUT)) {
       return 1;
    } 
    return 0;
