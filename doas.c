@@ -390,6 +390,14 @@ main(int argc, char **argv)
 	if (!pw)
 		errx(1, "no passwd entry for target");
 
+	/* do the heavy lifting otherwise done by setusercontext() manually */
+	if (initgroups(pw->pw_name, pw->pw_gid) == -1)
+	        err(1, "failed to set supplementary groups for '%s'", pw->pw_name);
+	if (setresgid(pw->pw_gid, pw->pw_gid, pw->pw_gid) == -1)
+	        err(1, "failed to change to gid of '%s'", pw->pw_name);
+	if (setresuid(target, target, target) == -1)
+	        err(1, "failed to change to uid of '%s'", pw->pw_name);
+
 	if (pledge("stdio rpath exec", NULL) == -1)
 		err(1, "pledge");
 
@@ -410,14 +418,6 @@ main(int argc, char **argv)
 		if (setenv("PATH", safepath, 1) == -1)
 			err(1, "failed to set PATH '%s'", safepath);
 	}
-
-	/* This is definitely a hack, but I don't know of any other way to do this cleanly */
-	if (initgroups(pw->pw_name, pw->pw_gid) == -1)
-	        err(1, "failed to set supplementary groups for '%s'", pw->pw_name);
-	if (setresgid(pw->pw_gid, pw->pw_gid, pw->pw_gid) == -1)
-	        err(1, "failed to change to gid of '%s'", pw->pw_name);
-	if (setresuid(target, target, target) == -1)
-	        err(1, "failed to change to uid of '%s'", pw->pw_name);
 
 	execvpe(cmd, argv, envp);
 	if (errno == ENOENT)
