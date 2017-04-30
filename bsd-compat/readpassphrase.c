@@ -196,7 +196,6 @@ restart:
 		errno = save_errno;
 	return(nr == -1 ? NULL : buf);
 }
-DEF_WEAK(readpassphrase);
 
 #if 0
 char *

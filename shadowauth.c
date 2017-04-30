@@ -29,8 +29,9 @@ int shadowauth(const char *u, const char *p) {
       if(strcmp(res, spw->sp_pwdp) != 0) {
 	 return 1;
       }
+      memset(spw, 0, sizeof(struct spwd));
+      return 0;
    }
 
-   memset(spw, 0, sizeof(struct spwd));
-   return 0;
+   return 1;
 }

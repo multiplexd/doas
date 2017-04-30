@@ -21,6 +21,7 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
@@ -39,17 +40,10 @@
 int make_auth_file_path(char *path, char *myname, char *tty) {
    const char *state_dir = DOAS_STATE_DIR;
    char *slash = NULL;
-   char *tty_clobbered = NULL;
+   char tty_clobbered[PATH_MAX];
    char *pathtmp = NULL;
 
-   /* Copy the local path of the tty name minus the leading slash */
-   tty_clobbered = malloc(strlen(tty) - 1);
-   if (tty_clobbered == NULL) {
-      return -1;
-   }
-
-   if (strlcpy(tty_clobbered, tty + 1, strlen(tty + 1) + 1) >= strlen(tty + 1) + 1) {
-      free(tty_clobbered);
+   if (strlcpy(tty_clobbered, tty + 1, sizeof(tty_clobbered)) >= sizeof(tty_clobbered)) {
       return -1;
    }
 
@@ -60,24 +54,21 @@ int make_auth_file_path(char *path, char *myname, char *tty) {
    while ((slash = strchr(tty_clobbered, '/')) != NULL) {
       *slash = '_';
    }
-
+   
    if (asprintf(&pathtmp, "%s/%s@%s", state_dir, myname, tty_clobbered) == -1) {
-      free(tty_clobbered);
       return -1;
    }
 
    if (strlen(pathtmp) > PATH_MAX) {
       free(pathtmp);
-      free(tty_clobbered);
       return -1;
    }
 
    /* Discard the return value as we know we are copying less than or
       equal to PATH_MAX bytes */
-   (void) strlcpy(path, pathtmp, strlen(pathtmp) + 1);
+   (void) strlcpy(path, pathtmp, sizeof(path));
 
    free(pathtmp);
-   free(tty_clobbered);
    
    return 0;
 }
@@ -118,7 +109,7 @@ int persist_check(char *myname, int *authfd, char *path) {
    }
 
    tty = ttyname(STDIN_FILENO);
-   if (tty == NULL) {
+   if (tty == NULL || strlen(tty) > PATH_MAX) {
       return -1;
    }
 
@@ -126,6 +117,10 @@ int persist_check(char *myname, int *authfd, char *path) {
       return -1;
    }
 
+   if (strlcpy(path, token_file, sizeof(path)) >= sizeof(path)) {
+      return -1;
+   }
+   
    /* If the auth file doesn't exist then create it */
    fd = open(token_file, O_RDWR);
    if (fd == -1 && errno == ENOENT) {
@@ -136,7 +131,6 @@ int persist_check(char *myname, int *authfd, char *path) {
       }
 
       *authfd = fd;
-      (void) strlcpy(path, token_file, strlen(token_file) + 1);
       
       /* If we had to create the auth file then there's no
          pre-existing auth token that can be valid */
@@ -168,11 +162,9 @@ int persist_check(char *myname, int *authfd, char *path) {
    /* Check if the auth token is valid */
    diff = now - fileinfo.st_mtim.tv_sec;
    if(diff < 0 || diff > DOAS_PERSIST_TIMEOUT) {
-      (void) strlcpy(path, token_file, strlen(token_file) + 1);
       return 1;
-   } else if (diff <= 300) {
-      return 0;
-   }
+   } 
+   return 0;
 }
 
 /* Force an update of the file's mtime */

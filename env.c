@@ -87,8 +87,6 @@ createenv(const struct rule *rule)
 	env->count = 0;
 
 	if (rule->options & KEEPENV) {
-		extern const char **environ;
-
 		for (i = 0; environ[i] != NULL; i++) {
 			struct envnode *node;
 			const char *e, *eq;
