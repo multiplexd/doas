@@ -39,6 +39,10 @@
 #include "persist.h"
 #include "doas.h"
 
+#ifndef DOAS_CONF_FILE
+#define DOAS_CONF_FILE "/etc/doas.conf"
+#endif
+
 void
 usage(void)
 {
@@ -353,7 +357,7 @@ main(int argc, char **argv)
 		exit(1);	/* fail safe */
 	}
 
-	parseconfig("/etc/doas.conf", 1);
+	parseconfig(DOAS_CONF_FILE, 1);
 
 	/* cmdline is used only for logging, no need to abort on truncate */
 	(void)strlcpy(cmdline, argv[0], sizeof(cmdline));
