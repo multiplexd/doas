@@ -22,16 +22,24 @@
 int shadowauth(const char *u, const char *p) {
    struct spwd *spw = NULL;
    char *res = NULL;
-   
-   if ((spw = getspnam(u)) != NULL) {
-      // crypt can use the salt from a previous encrypted password
-      res = crypt(p, spw->sp_pwdp); 
-      if(strcmp(res, spw->sp_pwdp) != 0) {
-	 return 1;
-      }
-      memset(spw, 0, sizeof(struct spwd));
-      return 0;
+
+   if ((spw = getspnam(u)) == NULL) {
+      return 1;
    }
 
-   return 1;
+   if ((res = crypt(p, spw->sp_pwdp)) == NULL) {
+      memset(spw, 0, sizeof(struct spwd));
+      return 1;
+   }
+
+   if (strcmp(res, spw->sp_pwdp) != 0) {
+      memset(spw, 0, sizeof(struct spwd));
+      memset(res, 0, strlen(res));
+      return 1;
+   }
+
+   memset(spw, 0, sizeof(struct spwd));
+   memset(res, 0, strlen(res));
+   
+   return 0;
 }
