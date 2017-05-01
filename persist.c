@@ -42,6 +42,7 @@ int make_auth_file_path(char *path, char *myname, char *tty) {
    char *slash = NULL;
    char tty_clobbered[PATH_MAX];
    char *pathtmp = NULL;
+   pid_t ppid = getppid();
 
    if (strlcpy(tty_clobbered, tty + 1, sizeof(tty_clobbered)) >= sizeof(tty_clobbered)) {
       return -1;
@@ -55,7 +56,7 @@ int make_auth_file_path(char *path, char *myname, char *tty) {
       *slash = '_';
    }
    
-   if (asprintf(&pathtmp, "%s/%s@%s@%d", state_dir, myname, tty_clobbered, getppid()) == -1) {
+   if (asprintf(&pathtmp, "%s/%s@%s@%d", state_dir, myname, tty_clobbered, ppid) == -1) {
       return -1;
    }
 
