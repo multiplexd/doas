@@ -38,6 +38,11 @@ There are some differences between this port of doas and the OpenBSD original:
    difficult to compile against musl libc and the code from OpenBSD is permissively
    licensed and therefore easy to include in this port).
 
+ - This port supports a `-v` flag which prints version information about the
+   installed copy of doas, including the commit number and abbreviated commit
+   hash. This option is not present in OpenBSD (OpenBSD does not internally version
+   their programs).
+
 ## Caveats
 
 There are, however, some caveats to this port of doas.

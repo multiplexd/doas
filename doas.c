@@ -37,6 +37,7 @@
 #include "bsd-compat/compat.h"
 #include "shadowauth.h"
 #include "persist.h"
+#include "version.h"
 #include "doas.h"
 
 #ifndef DOAS_CONF_FILE
@@ -295,7 +296,7 @@ main(int argc, char **argv)
 	if (geteuid())
 		errx(1, "not installed setuid");
 
-	while ((ch = getopt(argc, argv, "a:C:Lnsu:")) != -1) {
+	while ((ch = getopt(argc, argv, "a:C:Lnsu:v")) != -1) {
 		switch (ch) {
 		case 'a':
 			login_style = optarg;
@@ -319,6 +320,10 @@ main(int argc, char **argv)
 			break;
 		case 's':
 			sflag = 1;
+			break;
+		case 'v':
+		        puts(version);
+			exit(0);
 			break;
 		default:
 			usage();

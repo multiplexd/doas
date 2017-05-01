@@ -13,8 +13,13 @@ all: doas
 doas: $(OBJS)
 	$(CC) -o doas *.o bsd-compat/*.o $(_LDFLAGS)
 
-%.o: %.c
+%.o: %.c version.h
 	$(CC) $(_CFLAGS) -c $< -o $@
+
+version.h:
+	printf "const char *version = \"doas r%s.%s\";\n" \
+		$$(git rev-list --count HEAD) \
+		$$(git rev-parse --short HEAD) > version.h
 
 y.tab.o:
 	yacc parse.y
@@ -22,5 +27,5 @@ y.tab.o:
 
 clean:
 	rm -f doas
-	rm -f $(OBJS)
-	rm -f y.tab.c
+	rm -f $(OBJS) y.tab.c
+	rm -f version.h
