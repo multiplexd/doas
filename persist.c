@@ -48,14 +48,14 @@ int make_auth_file_path(char *path, char *myname, char *tty) {
    }
 
    /* Replace slashes in the tty name with underscores so we can store
-      auth files in the form 'user@tty'; for example, for user joe on
-      /dev/tty3 the auth file will be (by default)
-      /var/lib/doas/joe@dev_tty3. */
+      auth files in the form 'user@tty@ppid'; for example, for user
+      joe on /dev/tty3 with shell process id 1285 the auth file will
+      be (by default) /var/lib/doas/joe@dev_tty3@1285. */
    while ((slash = strchr(tty_clobbered, '/')) != NULL) {
       *slash = '_';
    }
    
-   if (asprintf(&pathtmp, "%s/%s@%s", state_dir, myname, tty_clobbered) == -1) {
+   if (asprintf(&pathtmp, "%s/%s@%s@%d", state_dir, myname, tty_clobbered, getppid()) == -1) {
       return -1;
    }
 
