@@ -1,4 +1,4 @@
-/* $OpenBSD: doas.c,v 1.71 2017/04/06 21:14:12 tedu Exp $ */
+/* $OpenBSD: doas.c,v 1.72 2017/05/27 09:51:07 tedu Exp $ */
 /*
  * Copyright (c) 2015 Ted Unangst <tedu@openbsd.org>
  *
@@ -240,7 +240,7 @@ authuser(char *myname, char *login_style, int persist)
 		    "failed auth for %s", myname);
 		if (ret == 1)
 		        unlink(path);
-		errc(1, EPERM, NULL);
+                errx(1, "Authorization failed");
 	}
 
 	memset(rbuf, 0, sizeof(rbuf));
