@@ -189,7 +189,8 @@ int persist_remove(char *myname) {
       return -1;
    }
 
-   ret = access(token_file, F_OK);
+   /* Perform check using effective uid/gid instead of real uid/gid */
+   ret = faccessat(0, token_file, F_OK, AT_EACCESS);
    if (ret == -1 && errno == ENOENT) {
       return 0;
    }
