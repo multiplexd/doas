@@ -30,6 +30,7 @@
 #include <unistd.h>
 #include <pwd.h>
 #include <grp.h>
+#include <signal.h>
 #include <syslog.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -209,18 +210,32 @@ authuser(char *myname, char *login_style, int persist)
 	char path[PATH_MAX]; /* In case tokens need to be deleted due to failed auth */
 	int ttyfd = -1;
 	int authfd = -1;
-	int ret = -1;
+        int ret = -1;
+	sigset_t oldsig, newsig;
 
 	if (persist)
 		ttyfd = open("/dev/tty", O_RDWR);
 	if (ttyfd != -1) {
-	        ret = persist_check(myname, &authfd, path);
+		/* Ignore console signals to prevent being killed with an auth file open */
+                (void)sigemptyset(&newsig);
+		(void)sigaddset(&newsig, SIGALRM);
+		(void)sigaddset(&newsig, SIGINT);
+		(void)sigaddset(&newsig, SIGQUIT);
+		(void)sigaddset(&newsig, SIGTERM);
+		(void)sigaddset(&newsig, SIGTSTP);
+		(void)sigaddset(&newsig, SIGTTIN);
+		(void)sigaddset(&newsig, SIGTTOU);
+		(void)sigaddset(&newsig, SIGPIPE);
+
+		(void)sigprocmask(SIG_BLOCK, &newsig, &oldsig);
+
+		ret = persist_check(myname, &authfd, path);
 		if(ret == 0) 
 		       goto good;
 	}
 
 	if (gethostname(host, sizeof(host)))
-   	        snprintf(host, sizeof(host), "?");
+		snprintf(host, sizeof(host), "?");
 	snprintf(cbuf, sizeof(cbuf),
 		 "\rdoas (%.32s@%.32s) password: ", myname, host);
 	challenge = cbuf;
@@ -230,16 +245,18 @@ authuser(char *myname, char *login_style, int persist)
 	if (response == NULL && errno == ENOTTY) {
 		syslog(LOG_AUTHPRIV | LOG_NOTICE,
 		    "tty required for %s", myname);
-		if (ret == 1)
-		        unlink(path); 
+                if (ret == 1) {
+                        unlink(path);
+                }
 		errx(1, "a tty is required");
 	}
 
 	if(shadowauth(myname, response) != 0) {
 		syslog(LOG_AUTHPRIV | LOG_NOTICE,
 		    "failed auth for %s", myname);
-		if (ret == 1)
-		        unlink(path);
+                if (ret == 1) {
+                        unlink(path);
+                }
                 errx(1, "Authorization failed");
 	}
 
@@ -248,7 +265,8 @@ authuser(char *myname, char *login_style, int persist)
 good:
 	if (ttyfd != -1 && ret != -1) {
 	        persist_update(authfd);
-		close(authfd);
+                close(authfd);
+                sigprocmask(SIG_SETMASK, &oldsig, &newsig);
 		close(ttyfd);
         } 
 }
