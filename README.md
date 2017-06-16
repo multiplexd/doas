@@ -43,6 +43,14 @@ There are some differences between this port of doas and the OpenBSD original:
    hash. This option is not present in OpenBSD (OpenBSD does not internally version
    their programs).
 
+ - Due to the implementation details of the authentication token system in use, this
+   port of doas blocks some signals when it is reading a password and also has an 
+   authentication token file open. This behaviour was introduced with commit 
+   [`c3c6e7e`](https://github.com/multiplexd/doas/commit/c3c6e7ec0f44cfb43ad67e0614de0dd82219c8e8)
+   and means that a user who is permitted to execute commands with the `persist` 
+   keyword cannot interrupt doas with Ctrl-C at the terminal when doas is reading
+   their password.
+
 ## Caveats
 
 There are, however, some caveats to this port of doas.
