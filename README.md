@@ -21,10 +21,11 @@ There are some differences between this port of doas and the OpenBSD original:
  - On OpenBSD, doas stores persistent authentication tokens (configured using the
    `persist` keyword in the configuration file) using an OpenBSD-specific interface
    (namely an ioctl(2) invoked on the controlling terminal). This port of doas stores
-   authentication tokens as a combination of a file composed of the invoking user's
+   authentication tokens as a file, whose name is composed of the invoking user's
    name, the path of the current controlling terminal and doas's parent process id
-   and the modification time of the file. These files are only readable and writable
-   by root and are stored in a directory which is only readable and writable by root.
+   and which contains the amount of time that has passed since the kernel booted 
+   (with granularity of one second). These files are only readable and writable by 
+   root and are stored in a directory which is only readable and writable by root.
    
  - On OpenBSD, all of the library functions required by doas are in the standard
    library. This port of doas requires borrowing and adapting some code from OpenBSD
@@ -43,30 +44,18 @@ There are some differences between this port of doas and the OpenBSD original:
    hash. This option is not present in OpenBSD (OpenBSD does not internally version
    their programs).
 
- - Due to the implementation details of the authentication token system in use, this
-   port of doas blocks some signals when it is reading a password and also has an 
-   authentication token file open. This behaviour was introduced with commit 
-   [`c3c6e7e`](https://github.com/multiplexd/doas/commit/c3c6e7ec0f44cfb43ad67e0614de0dd82219c8e8)
-   and means that a user who is permitted to execute commands with the `persist` 
-   keyword cannot interrupt doas with Ctrl-C at the terminal when doas is reading
-   their password.
-
 ## Caveats
 
 There are, however, some caveats to this port of doas.
 
- - The system for storing persistent authentication tokens in this port is easier to
-   circumvent than that used in the original OpenBSD version as it relies on
-   persistent information stored on disk instead of information stored in the running
-   kernel. The token timeouts are measured using the modification time of the token
-   file, which means that reversing the system clock could make a previously expired
-   ticket valid.
-   
- - Due to the implementation details of the system for storing persistent
-   authentication tokens, old authentication token files will build up over time in
-   the storage directory. (This could perhaps be worked around using cron(8) to
-   periodically clear the token storage directory).
-   
+ - The system for storing the authentication tokens (described above) has *some* 
+   integrity against old tokens becoming valid after a reboot, however old tokens 
+   should be cleared at boot to prevent this. This can be achieved in several ways,
+   such as putting the authentication token storage directory in a tmpfs or by running
+   an `@reboot` job in cron(8). Additionally, for long running systems, old token files
+   may build up over time, in which case it may be desirable to periodically clear 
+   these files using cron(8) or similar.
+
  - The security of the reimplementation of the OpenBSD specific code has not been
    reviewed to the extent of the code which originates from within OpenBSD.
 
