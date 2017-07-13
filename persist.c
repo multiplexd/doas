@@ -104,7 +104,9 @@ int persist_check(char *myname, int *authfd, char *path) {
    char *tty = NULL;
    char token_file[PATH_MAX];
    int fd;
-   time_t now, diff;
+   time_t rec, diff;
+   struct timespec now;
+   ssize_t ret, total;
    
    if (check_dir(state_dir) == -1) {
       return -1;
@@ -122,11 +124,11 @@ int persist_check(char *myname, int *authfd, char *path) {
    if (strlcpy(path, token_file, PATH_MAX) >= PATH_MAX) {
       return -1;
    }
-   
+
    /* If the auth file doesn't exist then create it */
-   fd = open(token_file, O_RDWR);
+   fd = open(token_file, O_RDWR| O_SYNC);
    if (fd == -1 && errno == ENOENT) {
-      fd = open(token_file, O_RDWR | O_CREAT, 0600);
+      fd = open(token_file, O_RDWR | O_CREAT | O_SYNC, 0600);
 
       if (fd == -1) {
 	 return -1;
@@ -152,17 +154,46 @@ int persist_check(char *myname, int *authfd, char *path) {
       close(fd);
       return -1;
    }
-   
-   now = time(NULL);
-   if (now == -1) {
+
+   /* This is a Linuxism. On Linux, CLOCK_MONOTONIC does not run while
+      the machine is suspended. */
+   if (clock_gettime(CLOCK_BOOTTIME, &now) < 0) {
       close(fd);
       return -1;
+   }
+
+   ret = read(fd, (void*) &rec, sizeof(time_t));
+   if (ret < 0) {
+      /* I/O error, abort */
+      close(fd);
+      return -1;
+   } else if (ret == 0) {
+      /* Empty file. We have a token file, but it isn't valid */
+      return 1;
+   } else if (ret != sizeof(time_t)) {
+      /* At this point, either the token file is bad or we haven't been able to
+         read a whole time_t, but we can't tell */
+      total += ret;
+      ret = read(fd, (void*) &rec + (sizeof(time_t) - ret), sizeof(time_t) - ret);
+      printf("%d\n", ret);
+
+      if (ret < 0) {
+         /* I/O error, abort */
+         close(fd);
+         return -1;
+      } else if (ret == 0) {
+         /* End of file. This file is invalid, but it's here. */
+         return 1;
+      } else if (ret + total != sizeof(time_t)) {
+         /* We can't seem to read all the data out of this file, but it's there */
+         return 1;
+      }
    }
 
    *authfd = fd;
 
    /* Check if the auth token is valid */
-   diff = now - fileinfo.st_mtim.tv_sec;
+   diff = now.tv_sec - rec;
    if(diff < 0 || diff > DOAS_PERSIST_TIMEOUT || !(diff <= DOAS_PERSIST_TIMEOUT)) {
       return 1;
    } 
@@ -171,8 +202,18 @@ int persist_check(char *myname, int *authfd, char *path) {
 
 /* Force an update of the file's mtime */
 void persist_update(int authfd) {
-   ftruncate(authfd, 1);
+   struct timespec now;
+
+   /* This is a Linuxism. See above. */
+   if (clock_gettime(CLOCK_BOOTTIME, &now) < 0)
+      return;
+
+   lseek(authfd, 0, SEEK_SET);
    ftruncate(authfd, 0);
+   
+   write(authfd, (void*) &now.tv_sec, sizeof(time_t));
+
+   return;
 }
 
 int persist_remove(char *myname) {

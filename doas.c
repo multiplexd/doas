@@ -30,7 +30,6 @@
 #include <unistd.h>
 #include <pwd.h>
 #include <grp.h>
-#include <signal.h>
 #include <syslog.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -211,24 +210,10 @@ authuser(char *myname, char *login_style, int persist)
 	int ttyfd = -1;
 	int authfd = -1;
         int ret = -1;
-	sigset_t oldsig, newsig;
 
 	if (persist)
 		ttyfd = open("/dev/tty", O_RDWR);
 	if (ttyfd != -1) {
-		/* Ignore console signals to prevent being killed with an auth file open */
-                (void)sigemptyset(&newsig);
-		(void)sigaddset(&newsig, SIGALRM);
-		(void)sigaddset(&newsig, SIGINT);
-		(void)sigaddset(&newsig, SIGQUIT);
-		(void)sigaddset(&newsig, SIGTERM);
-		(void)sigaddset(&newsig, SIGTSTP);
-		(void)sigaddset(&newsig, SIGTTIN);
-		(void)sigaddset(&newsig, SIGTTOU);
-		(void)sigaddset(&newsig, SIGPIPE);
-
-		(void)sigprocmask(SIG_BLOCK, &newsig, &oldsig);
-
 		ret = persist_check(myname, &authfd, path);
 		if(ret == 0) 
 		       goto good;
@@ -266,7 +251,6 @@ good:
 	if (ttyfd != -1 && ret != -1) {
 	        persist_update(authfd);
                 close(authfd);
-                sigprocmask(SIG_SETMASK, &oldsig, &newsig);
 		close(ttyfd);
         } 
 }
