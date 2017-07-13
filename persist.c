@@ -192,6 +192,11 @@ int persist_check(char *myname, int *authfd, char *path) {
 
    *authfd = fd;
 
+   /* Make sure that the recorded time is in the past */
+   if (now.tv_sec < rec) {
+      return 1;
+   }
+   
    /* Check if the auth token is valid */
    diff = now.tv_sec - rec;
    if(diff < 0 || diff > DOAS_PERSIST_TIMEOUT || !(diff <= DOAS_PERSIST_TIMEOUT)) {
