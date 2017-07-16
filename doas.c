@@ -206,7 +206,6 @@ authuser(char *myname, char *login_style, int persist)
 {
 	char *challenge = NULL, *response, rbuf[1024], cbuf[128];
 	char host[HOST_NAME_MAX + 1];
-	char path[PATH_MAX]; /* In case tokens need to be deleted due to failed auth */
 	int ttyfd = -1;
 	int authfd = -1;
         int ret = -1;
@@ -214,7 +213,7 @@ authuser(char *myname, char *login_style, int persist)
 	if (persist)
 		ttyfd = open("/dev/tty", O_RDWR);
 	if (ttyfd != -1) {
-		ret = persist_check(myname, &authfd, path);
+		ret = persist_check(myname, &authfd);
 		if(ret == 0) 
 		       goto good;
 	}
@@ -230,18 +229,12 @@ authuser(char *myname, char *login_style, int persist)
 	if (response == NULL && errno == ENOTTY) {
 		syslog(LOG_AUTHPRIV | LOG_NOTICE,
 		    "tty required for %s", myname);
-                if (ret == 1) {
-                        unlink(path);
-                }
 		errx(1, "a tty is required");
 	}
 
 	if(shadowauth(myname, response) != 0) {
 		syslog(LOG_AUTHPRIV | LOG_NOTICE,
 		    "failed auth for %s", myname);
-                if (ret == 1) {
-                        unlink(path);
-                }
                 errx(1, "Authorization failed");
 	}
 
@@ -272,7 +265,7 @@ main(int argc, char **argv)
 	uid_t target = 0;
 	gid_t groups[NGROUPS_MAX + 1];
 	int ngroups;
-	int i, ch;
+	int ret, i, ch;
 	int sflag = 0;
 	int nflag = 0;
 	char cwdpath[PATH_MAX];
@@ -307,10 +300,10 @@ main(int argc, char **argv)
 			confpath = optarg;
 			break;
 		case 'L':
-			i = open("/dev/tty", O_RDWR);
-			if (i != -1) 
-				i = persist_remove(myname);
-			if (i == -1)
+			ret = open("/dev/tty", O_RDWR);
+			if (ret != -1) 
+				ret = persist_remove(myname);
+			if (ret == -1)
 			        errx(1, "could not clear auth token");
 			exit(0); 
 		case 'u':

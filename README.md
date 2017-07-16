@@ -39,6 +39,15 @@ There are some differences between this port of doas and the OpenBSD original:
    difficult to compile against musl libc and the code from OpenBSD is permissively
    licensed and therefore easy to include in this port).
 
+ - On OpenBSD, doas only needs to know that it is running under a tty in order to 
+   record a persistent authentication token. This port needs to know under *which* 
+   tty it is running in order to record a persistent token. This is achieved by 
+   checking if file descriptors 0, 1 or 2 are attached to a tty device, in that order.
+   If an attached tty device is found then the token is recorded under that device.
+   Note that this means that this port of doas may prompt for a password when the 
+   OpenBSD version would not if file descriptors 0, 1 and 2 are redirected to
+   non-terminal devices.
+
  - This port supports a `-v` flag which prints version information about the
    installed copy of doas, including the commit number and abbreviated commit
    hash. This option is not present in OpenBSD (OpenBSD does not internally version

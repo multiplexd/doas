@@ -93,12 +93,33 @@ int check_dir(const char *dir) {
    return 0;
 }
 
+/* This is (surprise surprise) a hack! Since Linux (nor any other Unix-like platform)
+   offers no clean way to resolve /dev/tty to a path which is actually useful (like e.g.
+   /dev/tty2), we're going to gamble on one of STD{IN,OUT,ERR} being connected to our
+   controlling tty. This will make life interesting if doas is run from a script. sudo's
+   way of working out what its controlling tty is (on Linux) involves opening
+   /proc/self/stat, finding the device ID number of its controlling terminal and then
+   iterating over EVERY DEVICE NODE under /dev until it finds a tty with a matching
+   device ID. Oh and there was a CVE against sudo's parsing of /proc/self/stat a few
+   months before I wrote this comment. */
+
+/* Working with ttys requires regular doses of brainbleach to maintain sanity */
+char * ttyname_hack() {
+   int i;
+   char *tty;
+
+   for (i = 0; i <=2; i++) {
+      if ((tty = ttyname(i)) != NULL)
+         return tty;
+   }
+   
+   return NULL;
+}
+
 /* Return values: -1 on error, 0 on successful auth file access with
    valid token, 1 on successful auth file access with invalid auth
-   token. We also make a copy of the path of the auth file when
-   returning 1 so we have a path to unlink if the user doesn't
-   authenticate to update their auth token */
-int persist_check(char *myname, int *authfd, char *path) {
+   token. */
+int persist_check(char *myname, int *authfd) {
    const char *state_dir = DOAS_STATE_DIR;
    struct stat fileinfo;
    char *tty = NULL;
@@ -112,16 +133,12 @@ int persist_check(char *myname, int *authfd, char *path) {
       return -1;
    }
 
-   tty = ttyname(STDIN_FILENO);
+   tty = ttyname_hack();
    if (tty == NULL || strlen(tty) > PATH_MAX) {
       return -1;
    }
 
    if (make_auth_file_path(token_file, myname, tty) == -1) {
-      return -1;
-   }
-
-   if (strlcpy(path, token_file, PATH_MAX) >= PATH_MAX) {
       return -1;
    }
 
@@ -227,7 +244,7 @@ int persist_remove(char *myname) {
    char token_file[PATH_MAX];
    int ret;
    
-   if ((tty = ttyname(STDIN_FILENO)) == NULL) {
+   if ((tty = ttyname_hack()) == NULL) {
       return -1;
    }
 
