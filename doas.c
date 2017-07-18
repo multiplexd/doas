@@ -291,7 +291,7 @@ main(int argc, char **argv)
 	if (geteuid())
 		errx(1, "not installed setuid");
 
-	while ((ch = getopt(argc, argv, "a:C:Lnsu:v")) != -1) {
+	while ((ch = getopt(argc, argv, "+a:C:Lnsu:v")) != -1) {
 		switch (ch) {
 		case 'a':
 			login_style = optarg;
