@@ -179,6 +179,8 @@ int persist_check(char *myname, int *authfd) {
       return -1;
    }
 
+   *authfd = fd;
+   
    ret = read(fd, (void*) &rec, sizeof(time_t));
    if (ret < 0) {
       /* I/O error, abort */
@@ -192,7 +194,6 @@ int persist_check(char *myname, int *authfd) {
          read a whole time_t, but we can't tell */
       total += ret;
       ret = read(fd, (void*) &rec + (sizeof(time_t) - ret), sizeof(time_t) - ret);
-      printf("%d\n", ret);
 
       if (ret < 0) {
          /* I/O error, abort */
@@ -207,8 +208,6 @@ int persist_check(char *myname, int *authfd) {
       }
    }
 
-   *authfd = fd;
-
    /* Make sure that the recorded time is in the past */
    if (now.tv_sec < rec) {
       return 1;
@@ -222,7 +221,7 @@ int persist_check(char *myname, int *authfd) {
    return 0;
 }
 
-/* Force an update of the file's mtime */
+/* Force an update of the timestamp */
 void persist_update(int authfd) {
    struct timespec now;
 

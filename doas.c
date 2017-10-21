@@ -241,7 +241,7 @@ authuser(char *myname, char *login_style, int persist)
 	memset(rbuf, 0, sizeof(rbuf));
 
 good:
-	if (ttyfd != -1 && ret != -1) {
+        if (ttyfd != -1 && ret != -1) {
 	        persist_update(authfd);
                 close(authfd);
 		close(ttyfd);
