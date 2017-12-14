@@ -43,20 +43,30 @@ int make_auth_file_path(char *path, char *myname, char *tty) {
    char tty_clobbered[PATH_MAX];
    char *pathtmp = NULL;
    pid_t ppid = getppid();
+   pid_t ppgrp = getpgid(ppid);
+   pid_t sid = getsid(0);
 
    if (strlcpy(tty_clobbered, tty + 1, sizeof(tty_clobbered)) >= sizeof(tty_clobbered)) {
       return -1;
    }
 
    /* Replace slashes in the tty name with underscores so we can store
-      auth files in the form 'user@tty@ppid'; for example, for user
-      joe on /dev/tty3 with shell process id 1285 the auth file will
-      be (by default) /var/lib/doas/joe@dev_tty3@1285. */
+      files in the form 'user@tty@ppid@ppgrp@sid'; for example, for user
+      joe on /dev/tty3 with shell process id 1285 the auth file will be
+      something like (by default)
+      /var/lib/doas/joe@dev_tty3@1285@1285@1285. */
+
    while ((slash = strchr(tty_clobbered, '/')) != NULL) {
       *slash = '_';
    }
    
-   if (asprintf(&pathtmp, "%s/%s@%s@%d", state_dir, myname, tty_clobbered, ppid) == -1) {
+   if (asprintf(&pathtmp, "%s/%s@%s@%d@%d@%d",
+                state_dir,
+                myname,
+                tty_clobbered,
+                ppid,
+                ppgrp,
+                sid) == -1) {
       return -1;
    }
 
