@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 multiplex'd <multiplexd@gmx.com>
+ * Copyright (c) 2018 multiplexd <multiplexd@gmx.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,15 +14,22 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+/* Thanks to Duncan Overbruck for pointing out various issues with the
+ * previous versions of this code and with suggestions for alternative
+ * example code for comparison.
+ */
+
+#include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <termios.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -37,93 +44,80 @@
 #define DOAS_PERSIST_TIMEOUT 300 /* Five minutes */
 #endif
 
-int make_auth_file_path(char *path, char *myname, char *tty) {
-   const char *state_dir = DOAS_STATE_DIR;
-   char *slash = NULL;
-   char tty_clobbered[PATH_MAX];
-   char *pathtmp = NULL;
-   pid_t ppid = getppid();
-   pid_t ppgrp = getpgid(ppid);
-   pid_t sid = getsid(0);
+/* Credit for this function goes to Duncan Overbruck. Flameage for this
+   function goes to multiplexd. */
+int gettsfilename(char *name, int namelen, char *user) {
+   char buf[1024], path[PATH_MAX], *p, *ep;
+   const char *errstr;
+   pid_t ppid, sid, leader;
+   int fd, r, ttynr;
+   unsigned long long starttime;
 
-   if (strlcpy(tty_clobbered, tty + 1, sizeof(tty_clobbered)) >= sizeof(tty_clobbered)) {
-      return -1;
-   }
-
-   /* Replace slashes in the tty name with underscores so we can store
-      files in the form 'user@tty@ppid@ppgrp@sid'; for example, for user
-      joe on /dev/tty3 with shell process id 1285 the auth file will be
-      something like (by default)
-      /var/lib/doas/joe@dev_tty3@1285@1285@1285. */
-
-   while ((slash = strchr(tty_clobbered, '/')) != NULL) {
-      *slash = '_';
-   }
+   /* Get the pid of the session leader on our controlling tty */
    
-   if (asprintf(&pathtmp, "%s/%s@%s@%d@%d@%d",
-                state_dir,
-                myname,
-                tty_clobbered,
-                ppid,
-                ppgrp,
-                sid) == -1) {
+   if ((fd = open("/dev/tty", O_RDONLY)) == -1)
+      return -1;
+
+   r = ioctl(fd, TIOCGSID, &leader);
+   close(fd);
+   if (r == -1) return -1;
+
+   /* Find our tty number and the start time of our tty's session
+      leader. This is a little hairy. */
+   if (snprintf(path, sizeof(path), "/proc/%u/stat", leader) == -1)
+      return -1;
+
+   if ((fd = open(path, O_RDONLY)) == -1)
+      return -1;
+
+   p = buf;   
+   while ((r = read(fd, p, sizeof(buf) - (p - buf))) != 0) {
+      if (r == -1) {
+         if (errno == EAGAIN || errno == EINTR)
+            continue;
+         break;
+      }
+      p += r;
+      if (p >= buf + sizeof(buf))
+         break;
+   }
+   close(fd);
+
+   /* We parse from the end of the second field by spaces, as the
+      second field can itself contain spaces */
+   if ((p = strrchr(buf, ')')) == NULL)
+      return -1;
+
+   /* We want the seventh and twenty-second fields; see proc(5) */
+   r = 2;
+   for ((p = strtok(p, " ")); p; (p = strtok(NULL, " "))) {
+      switch (r++) {
+      case 7:
+         ttynr = strtonum(p, INT_MIN, INT_MAX, &errstr);
+         if (errstr)
+            return -1;
+         break;
+      case 22:
+         errno = 0;
+         starttime = strtoull(p, &ep, 10);
+         if (p == ep ||
+             (errno == ERANGE && starttime == ULLONG_MAX))
+            return -1;
+         break;
+      }
+      if (r == 23)
+         break;
+   }
+
+   ppid = getppid();
+   if ((sid = getsid(0)) == -1) return -1;
+
+   if (snprintf(name, namelen, "%s_%d_%d_%llu_%d_%d",
+                user, ttynr, leader, starttime, ppid, sid) == -1) {
       return -1;
    }
 
-   if (strlen(pathtmp) > PATH_MAX) {
-      free(pathtmp);
-      return -1;
-   }
-
-   if (strlcpy(path, pathtmp, PATH_MAX) >= PATH_MAX) {
-      free(pathtmp);
-      return -1;
-   }
-
-   free(pathtmp);
-   
    return 0;
-}
-
-int check_dir(const char *dir) {
-   struct stat dirinfo;
-
-   if (stat(dir, &dirinfo) < 0) {
-      return -1;
-   }
-
-   if (! S_ISDIR(dirinfo.st_mode)) {
-      return -1;
-   }
-
-   if (dirinfo.st_uid != 0 || dirinfo.st_gid != 0 || dirinfo.st_mode != (S_IRWXU | S_IFDIR)) {
-      return -1;
-   }
-
-   return 0;
-}
-
-/* This is (surprise surprise) a hack! Since Linux (nor any other Unix-like platform)
-   offers no clean way to resolve /dev/tty to a path which is actually useful (like e.g.
-   /dev/tty2), we're going to gamble on one of STD{IN,OUT,ERR} being connected to our
-   controlling tty. This will make life interesting if doas is run from a script. sudo's
-   way of working out what its controlling tty is (on Linux) involves opening
-   /proc/self/stat, finding the device ID number of its controlling terminal and then
-   iterating over EVERY DEVICE NODE under /dev until it finds a tty with a matching
-   device ID. Oh and there was a CVE against sudo's parsing of /proc/self/stat a few
-   months before I wrote this comment. */
-
-/* Working with ttys requires regular doses of brainbleach to maintain sanity */
-char * ttyname_hack() {
-   int i;
-   char *tty;
-
-   for (i = 0; i <=2; i++) {
-      if ((tty = ttyname(i)) != NULL)
-         return tty;
-   }
-   
-   return NULL;
 }
 
 /* Return values: -1 on error, 0 on successful auth file access with
@@ -131,53 +125,66 @@ char * ttyname_hack() {
    token. */
 int persist_check(char *myname, int *authfd) {
    const char *state_dir = DOAS_STATE_DIR;
-   struct stat fileinfo;
-   char *tty = NULL;
-   char token_file[PATH_MAX];
-   int fd;
-   time_t rec, diff;
+   struct stat nodeinfo;
+   int dirfd, fd;
+   char tsname[PATH_MAX];
    struct timespec now;
-   ssize_t ret, total;
+   time_t rec, *p;
+   int r;
+
+
+   /* First, attempt to open the state directory and ensure the permissions
+      are valid. */
    
-   if (check_dir(state_dir) == -1) {
+   if ((dirfd = open(state_dir, O_RDONLY | O_DIRECTORY)) == -1)
+      return -1;
+
+   if (fstat(dirfd, &nodeinfo) == -1) {
+      close(dirfd);
       return -1;
    }
 
-   tty = ttyname_hack();
-   if (tty == NULL || strlen(tty) > PATH_MAX) {
+   if (nodeinfo.st_uid != 0 || nodeinfo.st_gid != 0 ||
+       nodeinfo.st_mode != (S_IRWXU | S_IFDIR)) {
+      close(dirfd);
       return -1;
    }
 
-   if (make_auth_file_path(token_file, myname, tty) == -1) {
+   /* Now construct the name of the timestamp file  */
+   if (gettsfilename(tsname, sizeof(tsname), myname) == -1) {
+      close(dirfd);
       return -1;
    }
 
-   /* If the auth file doesn't exist then create it */
-   fd = open(token_file, O_RDWR| O_SYNC);
+   /* If the token file doesn't exist then create it */
+   fd = openat(dirfd, tsname, O_RDWR| O_SYNC);
    if (fd == -1 && errno == ENOENT) {
-      fd = open(token_file, O_RDWR | O_CREAT | O_SYNC, 0600);
+      fd = openat(dirfd, tsname, O_RDWR | O_CREAT | O_SYNC, 0600);
 
       if (fd == -1) {
-	 return -1;
+         close(dirfd);
+         return -1;
       }
 
       *authfd = fd;
-      
-      /* If we had to create the auth file then there's no
+
+      /* If we had to create the token file then there's no
          pre-existing auth token that can be valid */
+      close(dirfd);
       return 1;
    }
 
-   if (fstat(fd, &fileinfo) == -1) {
+   /* We are now finished with the fd pointing to the state directory */
+   close(dirfd);
+   
+   /* Now check the permissions of the token file */
+   if (fstat(fd, &nodeinfo) == -1) {
       close(fd);
       return -1;
    }
 
-   /* Make sure that the permissions of the auth token file are what
-      we expect */
-   if (fileinfo.st_uid != 0 || fileinfo.st_gid != 0 ||
-       fileinfo.st_mode != (S_IRUSR | S_IWUSR | S_IFREG)) {
-
+   if (nodeinfo.st_uid != 0 || nodeinfo.st_gid != 0 ||
+       nodeinfo.st_mode != (S_IRUSR | S_IWUSR | S_IFREG)) {
       close(fd);
       return -1;
    }
@@ -190,50 +197,41 @@ int persist_check(char *myname, int *authfd) {
    }
 
    *authfd = fd;
-   
-   ret = read(fd, (void*) &rec, sizeof(time_t));
-   if (ret < 0) {
-      /* I/O error, abort */
-      close(fd);
-      return -1;
-   } else if (ret == 0) {
-      /* Empty file. We have a token file, but it isn't valid */
-      return 1;
-   } else if (ret != sizeof(time_t)) {
-      /* At this point, either the token file is bad or we haven't been able to
-         read a whole time_t, but we can't tell */
-      total += ret;
-      ret = read(fd, (void*) &rec + (sizeof(time_t) - ret), sizeof(time_t) - ret);
 
-      if (ret < 0) {
-         /* I/O error, abort */
+   /* Kudos to Duncan Overbruck for this looping construct */
+   p = &rec;
+   while ((r = read(fd, p, sizeof(rec) - (p - &rec))) != 0) {
+      if (r == -1) {
+         if (errno == EAGAIN || errno == EINTR)
+            continue;
          close(fd);
          return -1;
-      } else if (ret == 0) {
-         /* End of file. This file is invalid, but it's here. */
-         return 1;
-      } else if (ret + total != sizeof(time_t)) {
-         /* We can't seem to read all the data out of this file, but it's there */
-         return 1;
       }
+
+      p += r;
+      if (p >= &rec + sizeof(rec))
+         break;
    }
 
-   /* Make sure that the recorded time is in the past */
-   if (now.tv_sec < rec) {
+   if ((p - &rec) < sizeof(rec))
+      /* The token file exists but is invalid */
       return 1;
-   }
-   
-   /* Check if the auth token is valid */
-   diff = now.tv_sec - rec;
-   if(diff < 0 || diff > DOAS_PERSIST_TIMEOUT || !(diff <= DOAS_PERSIST_TIMEOUT)) {
+
+   /* Check whether the timestamp in the file is in the past, and if so,
+      how recent it is */
+   if (now.tv_sec < rec)
       return 1;
-   } 
-   return 0;
+
+   if ((now.tv_sec - rec) > DOAS_PERSIST_TIMEOUT)
+      return 1;
+
+   return 0;   
 }
 
-/* Force an update of the timestamp */
 void persist_update(int authfd) {
    struct timespec now;
+   time_t *p;
+   int r;
 
    /* This is a Linuxism. See above. */
    if (clock_gettime(CLOCK_BOOTTIME, &now) < 0)
@@ -241,31 +239,57 @@ void persist_update(int authfd) {
 
    lseek(authfd, 0, SEEK_SET);
    ftruncate(authfd, 0);
-   
-   write(authfd, (void*) &now.tv_sec, sizeof(time_t));
+
+   p = &now.tv_sec;
+   while ((r = write(authfd, p, sizeof(now.tv_sec) - (p - &now.tv_sec))) != 0) {
+      if (r == -1) {
+         if (errno == EAGAIN || errno == EINTR)
+            continue;
+         return;
+      }
+
+      p += r;
+      if (p >= &now.tv_sec + sizeof(now.tv_sec))
+         break;
+   }
 
    return;
 }
 
 int persist_remove(char *myname) {
    const char *state_dir = DOAS_STATE_DIR;
-   char *tty = NULL;
-   char token_file[PATH_MAX];
-   int ret;
-   
-   if ((tty = ttyname_hack()) == NULL) {
+   struct stat nodeinfo;
+   char tsname[PATH_MAX];
+   int dirfd;
+   int r;
+
+   /* Open and check the state directory */
+
+   if ((dirfd = open(state_dir, O_RDONLY | O_DIRECTORY)) == -1)
+      return -1;
+
+   if (fstat(dirfd, &nodeinfo) == -1) {
+      close(dirfd);
       return -1;
    }
 
-   if (make_auth_file_path(token_file, myname, tty) == -1) {
+   if (nodeinfo.st_uid != 0 || nodeinfo.st_gid != 0 ||
+       nodeinfo.st_mode != (S_IRWXU | S_IFDIR)) {
+      close(dirfd);
       return -1;
    }
 
-   /* Perform check using effective uid/gid instead of real uid/gid */
-   ret = faccessat(0, token_file, F_OK, AT_EACCESS);
-   if (ret == -1 && errno == ENOENT) {
+   if (gettsfilename(tsname, sizeof(tsname), myname) == -1) {
+      close(dirfd);
+      return -1;
+   }
+
+   r = faccessat(dirfd, tsname, F_OK, AT_EACCESS);
+   if (r == -1 && errno == ENOENT)
       return 0;
-   }
-   
-   return unlink(token_file);
+   else if (r == -1)
+      return -1;
+
+   return unlinkat(dirfd, tsname, 0);
 }
+

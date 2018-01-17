@@ -42,11 +42,8 @@ There are some differences between this port of doas and the OpenBSD original:
  - On OpenBSD, doas only needs to know that it is running under a tty in order to 
    record a persistent authentication token. This port needs to know under *which* 
    tty it is running in order to record a persistent token. This is achieved by 
-   checking if file descriptors 0, 1 or 2 are attached to a tty device, in that order.
-   If an attached tty device is found then the token is recorded under that device.
-   Note that this means that this port of doas may prompt for a password when the 
-   OpenBSD version would not if file descriptors 0, 1 and 2 are redirected to
-   non-terminal devices.
+   parsing `/proc/[pid]/stat` (see proc(5)). This requires that procfs is mounted
+   on `/proc` for persistent authentication tokens to function correctly.
 
  - This port supports a `-v` flag which prints version information about the
    installed copy of doas, including the commit number and abbreviated commit
@@ -74,7 +71,7 @@ Issue `make`. If you need or want to use a different compiler (gcc is default) o
 specify extra compiler or linker flags, give them as arguments to make, e.g.:
 
 ```
-make CC=clang CFLAGS='-DDOAS_STATE_DIR=\"/some/where/else\"' LDFLAGS='-static'
+make CC=clang CFLAGS='-DDOAS\_STATE\_DIR=\"/some/where/else\"' LDFLAGS='-static'
 ```
 
 The available configurable options are:
@@ -104,7 +101,7 @@ post referenced above.
 ## License
 
 The source code files `persist.c`, `persist.h`, `shadowauth.c` and `shadowauth.h` are
-Copyright (c) multiplex'd; please see the files for license details.
+Copyright (c) multiplexd; please see the files for license details.
 
 All other source code files in the top level directory and the man pages are
 Copyright (c) Ted Unangst with adaptions by multiplex'd; please see the files for
