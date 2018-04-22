@@ -23,7 +23,7 @@ There are some differences between this port of doas and the OpenBSD original:
    (namely an ioctl(2) invoked on the controlling terminal). This port of doas stores
    authentication tokens as a files, whose names are composed of the invoking user's
    name, the path of the current controlling terminal and various other pieces of 
-   information including doas's parent process id and the current session start time
+   information including doas's parent process id and the current session start time,
    and which contains the amount of time that has passed since the kernel booted
    (with granularity of one second). These files are only readable and writable by
    root and are stored in a directory which is only readable and writable by root.
