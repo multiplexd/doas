@@ -72,7 +72,7 @@ Issue `make`. If you need or want to use a different compiler (gcc is default) o
 specify extra compiler or linker flags, give them as arguments to make, e.g.:
 
 ```
-make CC=clang CFLAGS='-DDOAS\_STATE\_DIR=\"/some/where/else\"' LDFLAGS='-static'
+make CC=clang CFLAGS='-DDOAS_STATE_DIR=\"/some/where/else\"' LDFLAGS='-static'
 ```
 
 The available configurable options are:
