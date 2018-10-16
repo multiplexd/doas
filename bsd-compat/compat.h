@@ -9,6 +9,9 @@
 #define UID_MAX UINT_MAX
 #define GID_MAX UINT_MAX
 
+/* definition for login.conf file path (empty on non-BSD systems) */
+#define _PATH_LOGIN_CONF ""
+
 /* readpassphrase has its own declarations*/
 #include "readpassphrase.h"
 
@@ -16,9 +19,10 @@
 extern const char *__progname;
 
 long long strtonum(const char *, long long, long long, const char **);
-size_t strlcpy(char *dst, const char *src, size_t siz);
-size_t strlcat(char *dst, const char *src, size_t siz);
-int pledge (const char *promises, const char *paths[]);
+size_t strlcpy(char *, const char *, size_t);
+size_t strlcat(char *, const char *, size_t);
+int pledge(const char *, const char *);
+int unveil(const char *, const char *);
 void *reallocarray(void *, size_t, size_t);
 void errc(int, int, const char *, ...);
 void closefrom(int);
