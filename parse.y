@@ -16,7 +16,7 @@
  */
 
 /* Adapted from the OpenBSD original for use on Linux systems by
-   multiplex'd <multiplexd@gmx.com> */
+   multiplexd <multiplexd@gmx.com> */
 
 %{
 #include <sys/types.h>
