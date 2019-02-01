@@ -1,4 +1,4 @@
-/* $OpenBSD: doas.c,v 1.73 2018/08/08 18:32:51 deraadt Exp $ */
+/* $OpenBSD: doas.c,v 1.74 2019/01/17 05:35:35 tedu Exp $ */
 /*
  * Copyright (c) 2015 Ted Unangst <tedu@openbsd.org>
  *
@@ -233,12 +233,13 @@ authuser(char *myname, char *login_style, int persist)
 	}
 
 	if(shadowauth(myname, response) != 0) {
+		explicit_bzero(rbuf, sizeof(rbuf));
 		syslog(LOG_AUTHPRIV | LOG_NOTICE,
 		    "failed auth for %s", myname);
                 errx(1, "Authorization failed");
 	}
 
-	memset(rbuf, 0, sizeof(rbuf));
+	explicit_bzero(rbuf, sizeof(rbuf));
 
 good:
         if (ttyfd != -1 && ret != -1) {

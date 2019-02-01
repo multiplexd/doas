@@ -19,6 +19,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "bsd-compat/compat.h"
+
 int shadowauth(const char *u, const char *p) {
    struct spwd *spw = NULL;
    char *res = NULL;
@@ -28,18 +30,18 @@ int shadowauth(const char *u, const char *p) {
    }
 
    if ((res = crypt(p, spw->sp_pwdp)) == NULL) {
-      memset(spw, 0, sizeof(struct spwd));
+      explicit_bzero(spw, sizeof(struct spwd));
       return 1;
    }
 
    if (strcmp(res, spw->sp_pwdp) != 0) {
-      memset(spw, 0, sizeof(struct spwd));
-      memset(res, 0, strlen(res));
+      explicit_bzero(spw, sizeof(struct spwd));
+      explicit_bzero(res, strlen(res));
       return 1;
    }
 
-   memset(spw, 0, sizeof(struct spwd));
-   memset(res, 0, strlen(res));
+   explicit_bzero(spw, sizeof(struct spwd));
+   explicit_bzero(res, strlen(res));
    
    return 0;
 }

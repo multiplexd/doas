@@ -27,5 +27,6 @@ void *reallocarray(void *, size_t, size_t);
 void errc(int, int, const char *, ...);
 void closefrom(int);
 void setprogname(const char *);
+void explicit_bzero(void *, size_t);
 
 #endif /* _BSD_COMPAT_H */

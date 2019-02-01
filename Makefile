@@ -3,7 +3,8 @@ _LDFLAGS=$(LDFLAGS) -lcrypt
 CC=gcc
 
 OBJS=doas.o env.o shadowauth.o persist.o y.tab.o			\
-	 bsd-compat/closefrom.o bsd-compat/errc.o bsd-compat/pledge.o	\
+	 bsd-compat/closefrom.o bsd-compat/errc.o 			\
+	 bsd-compat/explicit_bzero.o bsd-compat/pledge.o		\
 	 bsd-compat/readpassphrase.o bsd-compat/reallocarray.o		\
 	 bsd-compat/setprogname.o bsd-compat/strlcat.o			\
 	 bsd-compat/strlcpy.o bsd-compat/strtonum.o bsd-compat/unveil.o
