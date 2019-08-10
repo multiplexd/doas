@@ -1,4 +1,4 @@
-.\" $OpenBSD: doas.conf.5,v 1.35 2018/02/07 05:13:57 tedu Exp $
+.\" $OpenBSD: doas.conf.5,v 1.41 2019/07/07 19:21:28 tedu Exp $
 .\"
 .\"Copyright (c) 2015 Ted Unangst <tedu@openbsd.org>
 .\"
@@ -15,8 +15,8 @@
 .\"OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
 .\"Adapted from the OpenBSD original for use on Linux systems by
- \"multiplexd <multiplexd@gmx.com>
-.Dd $Mdocdate: February 7 2018 $
+ \"multiplexd <multi@in-addr.xyz>
+.Dd $Mdocdate: July 7 2019 $
 .Dt DOAS.CONF 5
 .Os
 .Sh NAME
@@ -52,20 +52,11 @@ The user is not required to enter a password.
 After the user successfully authenticates, do not ask for a password
 again for some time.
 .It Ic keepenv
-The user's environment is maintained.
-The default is to reset the environment, except for the variables
-.Ev DISPLAY ,
-.Ev HOME ,
-.Ev LOGNAME ,
-.Ev MAIL ,
-.Ev PATH ,
-.Ev TERM ,
-.Ev USER
-and
-.Ev USERNAME .
+Environment variables other than those listed in
+.Xr doas 1
+are retained when creating the environment for the new process.
 .It Ic setenv { Oo Ar variable ... Oc Oo Ar variable=value ... Oc Ic }
-In addition to the variables mentioned above, keep the space-separated
-specified variables.
+Keep or set the space-separated specified variables.
 Variables may also be removed with a leading
 .Sq -
 or set using the latter syntax.
@@ -75,6 +66,7 @@ is a
 .Ql $
 then the value to be set is taken from the existing environment
 variable of the indicated name.
+This option is processed after the default environment has been created.
 .El
 .It Ar identity
 The username to match.
@@ -138,12 +130,13 @@ and
 unsetting
 .Ev ENV ;
 permits tedu to run procmap as root without a password;
-and additionally permits root to run unrestricted commands as itself.
+and additionally permits root to run unrestricted commands as itself
+while retaining the original PATH.
 .Bd -literal -offset indent
 permit persist setenv { PKG_CACHE PKG_PATH } aja cmd pkg_add
 permit setenv { -ENV PS1=$DOAS_PS1 SSH_AUTH_SOCK } :wheel
 permit nopass tedu as root cmd /usr/sbin/procmap
-permit nopass keepenv root as root
+permit nopass keepenv setenv { PATH } root as root
 .Ed
 .Sh SEE ALSO
 .Xr doas 1
@@ -155,5 +148,5 @@ configuration file first appeared in
 .Sh AUTHORS
 .An Ted Unangst Aq Mt tedu@openbsd.org
 (OpenBSD original)
-.An multiplexd Aq Mt multiplexd@gmx.com
+.An multiplexd Aq Mt multi@in-addr.xyz
 (Linux port)

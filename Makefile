@@ -1,4 +1,4 @@
-_CFLAGS=$(CFLAGS) -D_GNU_SOURCE
+_CFLAGS=$(CFLAGS) -D_GNU_SOURCE -Wall -Werror
 _LDFLAGS=$(LDFLAGS) -lcrypt
 CC=gcc
 
