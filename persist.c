@@ -166,6 +166,12 @@ int persist_check(char *myname, int *authfd) {
          return -1;
       }
 
+      /* Make sure token file is owned by root:root */
+      if (fchownat(dirfd, tsname, 0, 0, 0) == -1) {
+        close(dirfd);
+        return -1;
+      }
+
       *authfd = fd;
 
       /* If we had to create the token file then there's no
