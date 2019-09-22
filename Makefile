@@ -1,4 +1,4 @@
-_CFLAGS=$(CFLAGS) -D_GNU_SOURCE -Wall -Werror
+_CFLAGS=$(CFLAGS) -Wall -Werror -D_GNU_SOURCE
 _LDFLAGS=$(LDFLAGS) -lcrypt
 CC=gcc
 
@@ -8,6 +8,25 @@ OBJS=doas.o env.o shadowauth.o persist.o y.tab.o			\
 	 bsd-compat/readpassphrase.o bsd-compat/reallocarray.o		\
 	 bsd-compat/setprogname.o bsd-compat/strlcat.o			\
 	 bsd-compat/strlcpy.o bsd-compat/strtonum.o bsd-compat/unveil.o
+
+ifdef STATE_DIR
+_CFLAGS += -DDOAS_STATE_DIR='"'$(STATE_DIR)'"'
+endif
+ifdef PERSIST_TIMEOUT
+_CFLAGS += -DDOAS_PERSIST_TIMEOUT='"'$(PERSIST_TIMEOUT)'"'
+endif
+ifdef CONF_FILE
+_CFLAGS += -DDOAS_CONF_FILE='"'$(CONF_FILE)'"'
+endif
+ifdef SAFE_PATH
+_CFLAGS += -DDOAS_SAFE_PATH='"'$(SAFE_PATH)'"'
+endif
+ifdef DEFAULT_PATH
+_CFLAGS += -DDOAS_DEFAULT_PATH='"'$(DEFAULT_PATH)'"'
+endif
+ifdef DEFAULT_UMASK
+_CFLAGS += -DDOAS_DEFAULT_UMASK='"'$(DEFAULT_UMASK)'"'
+endif
 
 all: doas
 

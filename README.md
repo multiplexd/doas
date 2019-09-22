@@ -79,38 +79,39 @@ Issue `make`. If you need or want to use a different compiler (gcc is default) o
 specify extra compiler or linker flags, give them as arguments to make, e.g.:
 
 ```
-make CC=clang CFLAGS='-DDOAS_STATE_DIR=\"/some/where/else\"' LDFLAGS='-static'
+make CC=clang CFLAGS='-O2' LDFLAGS='-static' STATE_DIR=/some/where/else
 ```
 
-The available configurable options are:
+The available configurable options, which may be specified as variables in
+make's command line arguments, are:
 
- - DOAS\_STATE\_DIR: Directory where persistent authentication token files will be
-   stored. Default is `/var/lib/doas`. This directory must be owned by user root and
-   group root and must only be readable and writable by root. If these conditions are
-   not satisfied then doas will silently fail to store persistent authentication
-   tokens when configured to do so.
+ - STATE\_DIR: Directory where persistent authentication token files will
+   be stored. Default is `/var/lib/doas`. This directory must be owned by user root
+   and group root and must only be readable and writable by root. If these
+   conditions are not satisfied then doas will silently fail to store persistent
+   authentication tokens when configured to do so.
 
- - DOAS\_PERSIST\_TIMEOUT: When configured to store persistent authentication tokens,
-   the number of seconds after successful authentication for which the token will
-   remain valid. The default is 300 seconds (five minutes). Changing this option is
-   inadvisable, as it makes doas's behaviour inconsistent with that of the OpenBSD
-   default.
+ - PERSIST\_TIMEOUT: When configured to store persistent authentication
+   tokens, the number of seconds after successful authentication for which the
+   token will remain valid. The default is 300 seconds (five minutes). Changing
+   this option is inadvisable, as it makes doas's behaviour inconsistent with that
+   of the OpenBSD default.
 
- - DOAS\_CONF\_FILE: Path to doas's configuration file. Default is `/etc/doas.conf`.
+ - CONF\_FILE: Path to doas's configuration file. Default is `/etc/doas.conf`.
 
- - DOAS\_SAFE\_PATH: The `PATH` which should be set when command execution is
+ - SAFE\_PATH: The `PATH` which should be set when command execution is
    permitted by a rule which explicitly specifies the command to be run. When the
    `cmd` keyword is used in the configuration file to specify a specific command
    which may be run, doas will reset the `PATH` inherited by that command to a
    pre-determined safe `PATH`. Default is
    `/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin`.
 
- - DOAS\_DEFAULT\_PATH: The `PATH` which should be inherited by executed
+ - DEFAULT\_PATH: The `PATH` which should be inherited by executed
    commands, where the safe path logic described above does not apply (i.e. in all
    cases where the configuration rule which permits command execution does not
-   specify a `cmd` rule). Default is the same `DOAS_SAFE_PATH`.
+   specify a `cmd` rule). Default is the same `SAFE_PATH`.
 
- - DOAS\_DEFAULT\_UMASK: The umask which should be set for executed commands.
+ - DEFAULT\_UMASK: The umask which should be set for executed commands.
    Default is `022`.
 
 ## Installing
