@@ -17,6 +17,13 @@ There are some differences between this port of doas and the OpenBSD original:
    supported nor is it a goal of this port to do so (this port was started in order
    to provide a lightweight sudo(8) alternative for embedded systems, where PAM
    typically is not available).
+
+ - On OpenBSD, the "BSD auth" mechanism allows the administrator to define the
+   `PATH` which is set in the environment and the umask when a particular user logs
+   in; doas respects this configuration and sets the `PATH` inherited by executed
+   commands and the umask to the appropriate value for the target user. As above,
+   this functionality is not available on Linux, so the inherited `PATH` and umask
+   are set to a value determined at compile-time.
    
  - On OpenBSD, doas stores persistent authentication tokens (configured using the
    `persist` keyword in the configuration file) using an OpenBSD-specific interface
@@ -90,6 +97,21 @@ The available configurable options are:
    default.
 
  - DOAS\_CONF\_FILE: Path to doas's configuration file. Default is `/etc/doas.conf`.
+
+ - DOAS\_SAFE\_PATH: The `PATH` which should be set when command execution is
+   permitted by a rule which explicitly specifies the command to be run. When the
+   `cmd` keyword is used in the configuration file to specify a specific command
+   which may be run, doas will reset the `PATH` inherited by that command to a
+   pre-determined safe `PATH`. Default is
+   `/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin`.
+
+ - DOAS\_DEFAULT\_PATH: The `PATH` which should be inherited by executed
+   commands, where the safe path logic described above does not apply (i.e. in all
+   cases where the configuration rule which permits command execution does not
+   specify a `cmd` rule). Default is the same `DOAS_SAFE_PATH`.
+
+ - DOAS\_DEFAULT\_UMASK: The umask which should be set for executed commands.
+   Default is `022`.
 
 ## Installing
 

@@ -44,6 +44,20 @@
 #define DOAS_CONF_FILE "/etc/doas.conf"
 #endif
 
+#ifndef DOAS_SAFE_PATH
+#define DOAS_SAFE_PATH "/bin:/sbin:/usr/bin:/usr/sbin:" \
+	"/usr/local/bin:/usr/local/sbin"
+#endif
+
+#ifndef DOAS_DEFAULT_PATH
+#define DOAS_DEFAULT_PATH "/bin:/sbin:/usr/bin:/usr/sbin:" \
+	"/usr/local/bin:/usr/local/sbin"
+#endif
+
+#ifndef DOAS_DEFAULT_UMASK
+#define DOAS_DEFAULT_UMASK 022
+#endif
+
 void
 usage(void)
 {
@@ -291,8 +305,7 @@ done:
 int
 main(int argc, char **argv)
 {
-	const char *safepath = "/bin:/sbin:/usr/bin:/usr/sbin:"
-	    "/usr/local/bin:/usr/local/sbin";
+	const char *safepath = DOAS_SAFE_PATH;
 	const char *confpath = NULL;
 	char *shargv[] = { NULL, NULL };
 	char *sh;
@@ -450,12 +463,15 @@ main(int argc, char **argv)
 		errx(1, "no passwd entry for target");
 
 	/* do the heavy lifting otherwise done by setusercontext() manually */
+	umask(DOAS_DEFAULT_UMASK);
 	if (initgroups(targpw->pw_name, targpw->pw_gid) == -1)
 	        err(1, "failed to set supplementary groups for '%s'", targpw->pw_name);
 	if (setresgid(targpw->pw_gid, targpw->pw_gid, targpw->pw_gid) == -1)
 	        err(1, "failed to change to gid of '%s'", targpw->pw_name);
 	if (setresuid(target, target, target) == -1)
 	        err(1, "failed to change to uid of '%s'", targpw->pw_name);
+	if (setenv("PATH", DOAS_DEFAULT_PATH, 1) == -1)
+		err(1, "failed to set default path");
 
 	if (pledge("stdio rpath exec", NULL) == -1)
 		err(1, "pledge");

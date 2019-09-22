@@ -12,7 +12,7 @@
 /* definition for login.conf file path (empty on non-BSD systems) */
 #define _PATH_LOGIN_CONF ""
 
-/* readpassphrase has its own declarations*/
+/* readpassphrase has its own declarations */
 #include "readpassphrase.h"
 
 /* for setprogname */
