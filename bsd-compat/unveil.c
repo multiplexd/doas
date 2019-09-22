@@ -1,7 +1,7 @@
 /* unveil shim code */
 
 /*
- * Copyright (c) 2018, multiplexd <multiplexd@gmx.com>
+ * Copyright (c) 2018, multiplexd <multi@in-addr.xyz>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
