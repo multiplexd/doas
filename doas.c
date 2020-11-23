@@ -419,6 +419,8 @@ main(int argc, char **argv)
 			break;
 	}
 
+	openlog(__progname, LOG_PID, LOG_AUTHPRIV | LOG_NOTICE);
+
 	cmd = argv[0];
 	if (!permit(uid, groups, ngroups, &rule, target, cmd,
 	    (const char **)argv + 1)) {
