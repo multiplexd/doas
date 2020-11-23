@@ -1,0 +1,5 @@
+y.tab.c
+*.o
+bsd-compat/*.o
+version.h
+doas
