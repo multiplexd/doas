@@ -46,7 +46,7 @@
 
 /* Credit for this function goes to Duncan Overbruck. Flameage for this
    function goes to multiplexd. */
-static int gettsfilename(char *name, int namelen, char *user) {
+static int gettsfilename(char *name, size_t namelen, char *user) {
     char buf[1024], path[PATH_MAX], *p, *ep;
     const char *errstr;
     pid_t ppid, sid, leader;
@@ -64,7 +64,7 @@ static int gettsfilename(char *name, int namelen, char *user) {
 
     /* Find our tty number and the start time of our tty's session
        leader. This is a little hairy. */
-    if (snprintf(path, sizeof(path), "/proc/%u/stat", leader) == -1)
+    if (snprintf(path, sizeof(path), "/proc/%u/stat", leader) >= sizeof(path))
         return -1;
 
     if ((fd = open(path, O_RDONLY)) == -1)
@@ -112,7 +112,7 @@ static int gettsfilename(char *name, int namelen, char *user) {
     if ((sid = getsid(0)) == -1) return -1;
 
     if (snprintf(name, namelen, "%s_%d_%d_%llu_%d_%d",
-                 user, ttynr, leader, starttime, ppid, sid) == -1) {
+                 user, ttynr, leader, starttime, ppid, sid) >= namelen) {
         return -1;
     }
 
