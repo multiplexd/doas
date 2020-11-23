@@ -22,26 +22,26 @@
 #include "bsd-compat/compat.h"
 
 int shadowauth(const char *u, const char *p) {
-   struct spwd *spw = NULL;
-   char *res = NULL;
+    struct spwd *spw = NULL;
+    char *res = NULL;
 
-   if ((spw = getspnam(u)) == NULL) {
-      return 1;
-   }
+    if ((spw = getspnam(u)) == NULL) {
+        return 1;
+    }
 
-   if ((res = crypt(p, spw->sp_pwdp)) == NULL) {
-      explicit_bzero(spw, sizeof(struct spwd));
-      return 1;
-   }
+    if ((res = crypt(p, spw->sp_pwdp)) == NULL) {
+        explicit_bzero(spw, sizeof(struct spwd));
+        return 1;
+    }
 
-   if (strcmp(res, spw->sp_pwdp) != 0) {
-      explicit_bzero(spw, sizeof(struct spwd));
-      explicit_bzero(res, strlen(res));
-      return 1;
-   }
+    if (strcmp(res, spw->sp_pwdp) != 0) {
+        explicit_bzero(spw, sizeof(struct spwd));
+        explicit_bzero(res, strlen(res));
+        return 1;
+    }
 
-   explicit_bzero(spw, sizeof(struct spwd));
-   explicit_bzero(res, strlen(res));
-   
-   return 0;
+    explicit_bzero(spw, sizeof(struct spwd));
+    explicit_bzero(res, strlen(res));
+
+    return 0;
 }
