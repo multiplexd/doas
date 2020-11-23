@@ -190,7 +190,7 @@ int persist_check(char *myname, int *authfd) {
 
     /* This is a Linuxism. On Linux, CLOCK_MONOTONIC does not run while
         the machine is suspended. */
-    if (clock_gettime(CLOCK_BOOTTIME, &now) < 0) {
+    if (clock_gettime(CLOCK_BOOTTIME, &now) == -1) {
         close(fd);
         return -1;
     }
@@ -233,11 +233,12 @@ void persist_update(int authfd) {
     int r;
 
     /* This is a Linuxism. See above. */
-    if (clock_gettime(CLOCK_BOOTTIME, &now) < 0)
+    if (clock_gettime(CLOCK_BOOTTIME, &now) == -1)
         return;
-
-    lseek(authfd, 0, SEEK_SET);
-    ftruncate(authfd, 0);
+    if (lseek(authfd, 0, SEEK_SET) == -1)
+        return;
+    if (ftruncate(authfd, 0) == -1)
+        return;
 
     p = &now.tv_sec;
     while ((r = write(authfd, p, sizeof(now.tv_sec) - (p - &now.tv_sec))) != 0) {
