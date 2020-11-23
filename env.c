@@ -15,9 +15,6 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* Adapted from the OpenBSD original for use on Linux systems by
-   multiplexd <multi@in-addr.xyz> */
-
 #include <sys/types.h>
 
 #include <string.h>
@@ -53,7 +50,6 @@ envcmp(struct envnode *a, struct envnode *b)
 {
 	return strcmp(a->key, b->key);
 }
-
 RB_GENERATE_STATIC(envtree, envnode, node, envcmp)
 
 static struct envnode *
@@ -116,6 +112,8 @@ createenv(const struct rule *rule, const struct passwd *mypw,
 	fillenv(env, copyset);
 
 	if (rule->options & KEEPENV) {
+		extern char **environ;
+
 		for (i = 0; environ[i] != NULL; i++) {
 			struct envnode *node;
 			const char *e, *eq;

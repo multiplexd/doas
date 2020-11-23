@@ -1,4 +1,4 @@
-/* $OpenBSD: doas.c,v 1.82 2019/10/18 17:15:45 tedu Exp $ */
+/* $OpenBSD: doas.c,v 1.84 2020/10/09 07:43:38 kn Exp $ */
 /*
  * Copyright (c) 2015 Ted Unangst <tedu@openbsd.org>
  *
@@ -14,9 +14,6 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-
-/* Adapted from the OpenBSD original for use on Linux systems by
-   multiplexd <multi@in-addr.xyz> */
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -58,7 +55,7 @@
 #define DOAS_DEFAULT_UMASK 022
 #endif
 
-void
+static void __dead
 usage(void)
 {
 	fprintf(stderr, "usage: doas [-Lns] [-a style] [-C config] [-u user]"
@@ -198,7 +195,7 @@ parseconfig(const char *filename, int checkperms)
 		exit(1);
 }
 
-void
+static void __dead
 checkconfig(const char *confpath, int argc, char **argv,
     uid_t uid, gid_t *groups, int ngroups, uid_t target)
 {
@@ -223,17 +220,17 @@ static void
 authuser(char *myname, char *login_style, int persist)
 {
 	(void) login_style;
-	char *challenge = NULL, *response, rbuf[1024], cbuf[128];
-	char host[HOST_NAME_MAX + 1];
+	char *challenge	= NULL,	*response, rbuf[1024], cbuf[128];
+	char host[HOST_NAME_MAX	+ 1];
 	int ttyfd = -1;
 	int authfd = -1;
-        int ret = -1;
+	int ret	= -1;
 
 	if (persist)
-		ttyfd = open("/dev/tty", O_RDWR);
+		ttyfd =	open("/dev/tty", O_RDWR);
 	if (ttyfd != -1) {
 		ret = persist_check(myname, &authfd);
-		if(ret == 0) 
+		if(ret == 0)
 		       goto good;
 	}
 
@@ -250,22 +247,19 @@ authuser(char *myname, char *login_style, int persist)
 		    "tty required for %s", myname);
 		errx(1, "a tty is required");
 	}
-
-	if(shadowauth(myname, response) != 0) {
+	if (shadowauth(myname, response) != 0) {
 		explicit_bzero(rbuf, sizeof(rbuf));
 		syslog(LOG_AUTHPRIV | LOG_NOTICE,
 		    "failed auth for %s", myname);
-                errx(1, "Authorization failed");
+		errx(1, "Authorization failed");
 	}
-
 	explicit_bzero(rbuf, sizeof(rbuf));
-
 good:
-        if (ttyfd != -1 && ret != -1) {
-	        persist_update(authfd);
-                close(authfd);
+	if (ttyfd != -1	&& ret != -1) {
+		persist_update(authfd);
+		close(authfd);
 		close(ttyfd);
-        } 
+	}
 }
 
 int
@@ -360,11 +354,11 @@ main(int argc, char **argv)
 			break;
 		case 'L':
 			ret = open("/dev/tty", O_RDWR);
-			if (ret != -1) 
+			if (ret != -1)
 				ret = persist_remove(mypw->pw_name);
 			if (ret == -1)
 			        errx(1, "could not clear auth token");
-			exit(0); 
+			exit(0);
 		case 'u':
 			if (parseuid(optarg, &target) != 0)
 				errx(1, "unknown user");
@@ -425,13 +419,11 @@ main(int argc, char **argv)
 			break;
 	}
 
-	openlog(__progname, LOG_PID, LOG_AUTHPRIV | LOG_NOTICE);
-	
 	cmd = argv[0];
 	if (!permit(uid, groups, ngroups, &rule, target, cmd,
 	    (const char **)argv + 1)) {
 		syslog(LOG_AUTHPRIV | LOG_NOTICE,
-		    "failed command for %s: %s", mypw->pw_name, cmdline);
+		    "command not permitted for %s: %s", mypw->pw_name, cmdline);
 		errc(1, EPERM, NULL);
 	}
 
@@ -488,8 +480,11 @@ main(int argc, char **argv)
 	if (pledge("stdio exec", NULL) == -1)
 		err(1, "pledge");
 
-	syslog(LOG_AUTHPRIV | LOG_INFO, "%s ran command %s as %s from %s",
-	    mypw->pw_name, cmdline, targpw->pw_name, cwd);
+	if (!(rule->options & NOLOG)) {
+		syslog(LOG_AUTHPRIV | LOG_INFO,
+		    "%s ran command %s as %s from %s",
+		    mypw->pw_name, cmdline, targpw->pw_name, cwd);
+	}
 
 	envp = prepenv(rule, mypw, targpw);
 

@@ -1,4 +1,4 @@
-/* $OpenBSD: parse.y,v 1.27 2018/07/11 07:39:22 krw Exp $ */
+/* $OpenBSD: parse.y,v 1.28 2020/10/09 07:43:38 kn Exp $ */
 /*
  * Copyright (c) 2015 Ted Unangst <tedu@openbsd.org>
  *
@@ -15,9 +15,6 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* Adapted from the OpenBSD original for use on Linux systems by
-   multiplexd <multi@in-addr.xyz> */
-
 %{
 #include <sys/types.h>
 #include <ctype.h>
@@ -25,9 +22,9 @@
 #include <stdint.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <err.h>
-#include <stdlib.h>
 
 #include "bsd-compat/compat.h"
 #include "doas.h"
@@ -75,7 +72,7 @@ arraylen(const char **arr)
 %}
 
 %token TPERMIT TDENY TAS TCMD TARGS
-%token TNOPASS TPERSIST TKEEPENV TSETENV
+%token TNOPASS TNOLOG TPERSIST TKEEPENV TSETENV
 %token TSTRING
 
 %%
@@ -140,6 +137,9 @@ options:	/* none */ {
 		} ;
 option:		TNOPASS {
 			$$.options = NOPASS;
+			$$.envlist = NULL;
+		} | TNOLOG {
+			$$.options = NOLOG;
 			$$.envlist = NULL;
 		} | TPERSIST {
 			$$.options = PERSIST;
@@ -214,6 +214,7 @@ static struct keyword {
 	{ "cmd", TCMD },
 	{ "args", TARGS },
 	{ "nopass", TNOPASS },
+	{ "nolog", TNOLOG },
 	{ "persist", TPERSIST },
 	{ "keepenv", TKEEPENV },
 	{ "setenv", TSETENV },

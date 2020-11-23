@@ -5,9 +5,13 @@
 
 /* definitions taken from grepping around /usr/include on an amd64
    OpenBSD 6.1 machine */
-#define _PW_NAME_LEN  31
+#define _PW_NAME_LEN 31
+#define _PW_BUF_LEN 16384
 #define UID_MAX UINT_MAX
 #define GID_MAX UINT_MAX
+
+/* dummy definition */
+#define __dead
 
 /* definition for login.conf file path (empty on non-BSD systems) */
 #define _PATH_LOGIN_CONF ""
