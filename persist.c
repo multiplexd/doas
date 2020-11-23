@@ -78,8 +78,6 @@ static int gettsfilename(char *name, size_t namelen, char *user) {
             break;
         }
         p += r;
-        if (p >= buf + sizeof(buf))
-            break;
     }
     close(fd);
 
@@ -208,8 +206,6 @@ int persist_check(char *myname, int *authfd) {
         }
 
         p += r;
-        if (p >= &rec + sizeof(rec))
-            break;
     }
 
     if ((p - &rec) < sizeof(rec))
@@ -249,8 +245,6 @@ void persist_update(int authfd) {
         }
 
         p += r;
-        if (p >= &now.tv_sec + sizeof(now.tv_sec))
-            break;
     }
 
     return;
