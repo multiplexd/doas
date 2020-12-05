@@ -1,6 +1,5 @@
 _CFLAGS=$(CFLAGS) -Wall -D_GNU_SOURCE
 _LDFLAGS=$(LDFLAGS) -lcrypt
-CC=gcc
 
 OBJS=doas.o env.o shadowauth.o persist.o y.tab.o			\
 	 bsd-compat/closefrom.o bsd-compat/errc.o 			\
