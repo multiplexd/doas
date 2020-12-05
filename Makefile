@@ -1,5 +1,7 @@
 _CFLAGS=$(CFLAGS) -Wall -D_GNU_SOURCE
 _LDFLAGS=$(LDFLAGS) -lcrypt
+PREFIX?=/usr/local
+MANDIR?=$(DESTDIR)$(PREFIX)/man
 
 OBJS=doas.o env.o shadowauth.o persist.o y.tab.o			\
 	 bsd-compat/closefrom.o bsd-compat/errc.o 			\
@@ -48,3 +50,17 @@ clean:
 	rm -f doas
 	rm -f $(OBJS) y.tab.c
 	rm -f version.h
+
+install: doas
+	mkdir -p $(DESTDIR)$(PREFIX)/bin
+	cp doas $(DESTDIR)$(PREFIX)/bin/
+	chmod 4755 $(DESTDIR)$(PREFIX)/bin/doas
+	mkdir -p $(MANDIR)/man1
+	cp doas.1 $(MANDIR)/man1/doas.1
+	mkdir -p $(MANDIR)/man5
+	cp doas.conf.5 $(MANDIR)/man5/doas.conf.5
+
+uninstall:
+	rm -f $(DESTDIR)$(PREFIX)/bin/doas
+	rm -f $(MANDIR)/man1/doas.1
+	rm -f $(MANDIR)/man5/doas.conf.5
