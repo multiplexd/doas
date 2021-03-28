@@ -17,8 +17,8 @@
 #ifndef _PERSIST_H
 #define _PERSIST_H
 
-int persist_check(char *, int *);
+int persist_check(int *);
 void persist_update(int);
-int persist_remove(char *);
+int persist_remove(void);
 
 #endif /* _PERSIST_H */

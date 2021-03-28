@@ -229,7 +229,7 @@ authuser(char *myname, char *login_style, int persist)
 	if (persist)
 		ttyfd =	open("/dev/tty", O_RDWR);
 	if (ttyfd != -1) {
-		ret = persist_check(myname, &authfd);
+		ret = persist_check(&authfd);
 		if(ret == 0)
 		       goto good;
 	}
@@ -332,18 +332,6 @@ main(int argc, char **argv)
 
 	uid = getuid();
 
-	/* Need to find out the name of the calling user before option
-	   processing takes place in case we are resetting auth
-	   tokens. */
-	rv = getpwuid_r(uid, &mypwstore, mypwbuf, sizeof(mypwbuf), &mypw);
-	if (rv != 0)
-		err(1, "getpwuid_r failed");
-	if (mypw == NULL)
-		errx(1, "no passwd entry for self");
-
-	if (geteuid())
-		errx(1, "not installed setuid");
-
 	while ((ch = getopt(argc, argv, "+a:C:Lnsu:v")) != -1) {
 		switch (ch) {
 		case 'a':
@@ -355,7 +343,7 @@ main(int argc, char **argv)
 		case 'L':
 			ret = open("/dev/tty", O_RDWR);
 			if (ret != -1)
-				ret = persist_remove(mypw->pw_name);
+				ret = persist_remove();
 			if (ret == -1)
 			        errx(1, "could not clear auth token");
 			exit(0);
@@ -387,6 +375,11 @@ main(int argc, char **argv)
 	} else if ((!sflag && !argc) || (sflag && argc))
 		usage();
 
+	rv = getpwuid_r(uid, &mypwstore, mypwbuf, sizeof(mypwbuf), &mypw);
+	if (rv != 0)
+		err(1, "getpwuid_r failed");
+	if (mypw == NULL)
+		errx(1, "no passwd entry for self");
 	ngroups = getgroups(NGROUPS_MAX, groups);
 	if (ngroups == -1)
 		err(1, "can't get groups");
@@ -407,6 +400,9 @@ main(int argc, char **argv)
 		    target);
 		exit(1);	/* fail safe */
 	}
+
+	if (geteuid())
+		errx(1, "not installed setuid");
 
 	parseconfig(DOAS_CONF_FILE, 1);
 

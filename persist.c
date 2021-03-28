@@ -46,7 +46,7 @@
 
 /* Credit for this function goes to Duncan Overbruck. Flameage for this
    function goes to multiplexd. */
-static int gettsfilename(char *name, size_t namelen, char *user) {
+static int gettsfilename(char *name, size_t namelen) {
     char buf[1024], path[PATH_MAX], *p, *ep;
     const char *errstr;
     pid_t ppid, sid, leader;
@@ -109,8 +109,8 @@ static int gettsfilename(char *name, size_t namelen, char *user) {
     ppid = getppid();
     if ((sid = getsid(0)) == -1) return -1;
 
-    if (snprintf(name, namelen, "%s_%d_%d_%llu_%d_%d",
-                 user, ttynr, leader, starttime, ppid, sid) >= namelen) {
+    if (snprintf(name, namelen, "%d_%d_%d_%llu_%d_%d",
+                 getuid(), ttynr, leader, starttime, ppid, sid) >= namelen) {
         return -1;
     }
 
@@ -120,7 +120,7 @@ static int gettsfilename(char *name, size_t namelen, char *user) {
 /* Return values: -1 on error, 0 on successful auth file access with
    valid token, 1 on successful auth file access with invalid auth
    token. */
-int persist_check(char *myname, int *authfd) {
+int persist_check(int *authfd) {
     const char *state_dir = DOAS_STATE_DIR;
     struct stat nodeinfo;
     int dirfd, fd;
@@ -148,7 +148,7 @@ int persist_check(char *myname, int *authfd) {
     }
 
     /* Now construct the name of the timestamp file  */
-    if (gettsfilename(tsname, sizeof(tsname), myname) == -1) {
+    if (gettsfilename(tsname, sizeof(tsname)) == -1) {
         close(dirfd);
         return -1;
     }
@@ -250,7 +250,7 @@ void persist_update(int authfd) {
     return;
 }
 
-int persist_remove(char *myname) {
+int persist_remove() {
     const char *state_dir = DOAS_STATE_DIR;
     struct stat nodeinfo;
     char tsname[PATH_MAX];
@@ -273,7 +273,7 @@ int persist_remove(char *myname) {
         return -1;
     }
 
-    if (gettsfilename(tsname, sizeof(tsname), myname) == -1) {
+    if (gettsfilename(tsname, sizeof(tsname)) == -1) {
         close(dirfd);
         return -1;
     }
