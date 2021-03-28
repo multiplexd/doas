@@ -133,7 +133,7 @@ int persist_check(int *authfd) {
     /* First, attempt to open the state directory and ensure the permissions
        are valid. */
 
-    if ((dirfd = open(state_dir, O_RDONLY | O_DIRECTORY)) == -1)
+    if ((dirfd = open(state_dir, O_RDONLY | O_DIRECTORY | O_NOFOLLOW)) == -1)
         return -1;
 
     if (fstat(dirfd, &nodeinfo) == -1) {
@@ -154,7 +154,7 @@ int persist_check(int *authfd) {
     }
 
     /* If the token file doesn't exist then create it */
-    fd = openat(dirfd, tsname, O_RDWR| O_SYNC);
+    fd = openat(dirfd, tsname, O_RDWR | O_SYNC | O_NOFOLLOW);
     if (fd == -1 && errno == ENOENT) {
         fd = openat(dirfd, tsname, O_RDWR | O_CREAT | O_SYNC, 0600);
 
@@ -255,11 +255,11 @@ int persist_remove() {
     struct stat nodeinfo;
     char tsname[PATH_MAX];
     int dirfd;
-    int r;
+    int r, e;
 
     /* Open and check the state directory */
 
-    if ((dirfd = open(state_dir, O_RDONLY | O_DIRECTORY)) == -1)
+    if ((dirfd = open(state_dir, O_RDONLY | O_DIRECTORY | O_NOFOLLOW)) == -1)
         return -1;
 
     if (fstat(dirfd, &nodeinfo) == -1) {
@@ -278,12 +278,10 @@ int persist_remove() {
         return -1;
     }
 
-    r = faccessat(dirfd, tsname, F_OK, AT_EACCESS);
-    if (r == -1 && errno == ENOENT)
-        return 0;
-    else if (r == -1)
-        return -1;
+    r = unlinkat(dirfd, tsname, 0);
+    e = errno;
+    close(dirfd);
 
-    return unlinkat(dirfd, tsname, 0);
+    return (r == 0 || (r == -1 && e == ENOENT)) ? 0 : -1;
 }
 
