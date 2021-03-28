@@ -1,4 +1,4 @@
-.\" $OpenBSD: doas.1,v 1.23 2019/07/04 19:04:17 tedu Exp $
+.\" $OpenBSD: doas.1,v 1.25 2021/01/16 09:18:41 martijn Exp $
 .\"
 .\"Copyright (c) 2015 Ted Unangst <tedu@openbsd.org>
 .\"
@@ -13,7 +13,7 @@
 .\"WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 .\"ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\"OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-.Dd $Mdocdate: July 4 2019 $
+.Dd $Mdocdate: January 16 2021 $
 .Dt DOAS 1
 .Os
 .Sh NAME
@@ -96,13 +96,13 @@ will be printed on standard output, depending on command
 matching results.
 No command is executed.
 .It Fl L
-Clear any persisted authorizations from previous invocations,
+Clear any persisted authentications from previous invocations,
 then immediately exit.
 No command is executed.
 .It Fl n
-Non interactive mode, fail if
-.Nm
-would prompt for password.
+Non interactive mode, fail if the matching rule doesn't have the
+.Ic nopass
+option.
 .It Fl s
 Execute the shell from
 .Ev SHELL
