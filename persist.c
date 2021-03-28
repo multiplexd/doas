@@ -126,9 +126,6 @@ int persist_check(int *authfd) {
     int dirfd, fd;
     char tsname[PATH_MAX];
     struct timespec now;
-    time_t rec, *p;
-    int r;
-
 
     /* First, attempt to open the state directory and ensure the permissions
        are valid. */
@@ -187,7 +184,7 @@ int persist_check(int *authfd) {
     }
 
     /* This is a Linuxism. On Linux, CLOCK_MONOTONIC does not run while
-        the machine is suspended. */
+       the machine is suspended. */
     if (clock_gettime(CLOCK_BOOTTIME, &now) == -1) {
         close(fd);
         return -1;
@@ -195,58 +192,30 @@ int persist_check(int *authfd) {
 
     *authfd = fd;
 
-    /* Kudos to Duncan Overbruck for this looping construct */
-    p = &rec;
-    while ((r = read(fd, p, sizeof(rec) - (p - &rec))) != 0) {
-        if (r == -1) {
-            if (errno == EAGAIN || errno == EINTR)
-                continue;
-            close(fd);
-            return -1;
-        }
-
-        p += r;
-    }
-
-    if ((p - &rec) < sizeof(rec))
-        /* The token file exists but is invalid */
+    if (now.tv_sec < nodeinfo.st_mtim.tv_sec)
+        /* timestamp is in future, and is thus invalid */
         return 1;
 
-    /* Check whether the timestamp in the file is in the past, and if so,
-        how recent it is */
-    if (now.tv_sec < rec)
+    if ((now.tv_sec - nodeinfo.st_mtim.tv_sec) > DOAS_PERSIST_TIMEOUT)
+        /* difference between now and the timestamp is greater than the
+           configured timeout */
         return 1;
 
-    if ((now.tv_sec - rec) > DOAS_PERSIST_TIMEOUT)
-        return 1;
-
+    /* timestamp is within the timeout */
     return 0;
 }
 
 void persist_update(int authfd) {
-    struct timespec now;
-    time_t *p;
-    int r;
+    struct timespec spec[2];
+
+    /* Only update the last modification time */
+    spec[0].tv_nsec = UTIME_OMIT;
 
     /* This is a Linuxism. See above. */
-    if (clock_gettime(CLOCK_BOOTTIME, &now) == -1)
-        return;
-    if (lseek(authfd, 0, SEEK_SET) == -1)
-        return;
-    if (ftruncate(authfd, 0) == -1)
+    if (clock_gettime(CLOCK_BOOTTIME, &spec[1]) == -1)
         return;
 
-    p = &now.tv_sec;
-    while ((r = write(authfd, p, sizeof(now.tv_sec) - (p - &now.tv_sec))) != 0) {
-        if (r == -1) {
-            if (errno == EAGAIN || errno == EINTR)
-                continue;
-            return;
-        }
-
-        p += r;
-    }
-
+    (void) futimens(authfd, spec);
     return;
 }
 
