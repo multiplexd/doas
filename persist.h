@@ -17,8 +17,14 @@
 #ifndef _PERSIST_H
 #define _PERSIST_H
 
-int persist_check(int *);
+int persist_check(int *, int *, char *, size_t, char *, size_t);
 void persist_update(int);
-int persist_remove(void);
+void persist_commit(int, char *, char *);
+int persist_clear(void);
+
+#define PERSIST_ERROR  -1
+#define PERSIST_OK      0
+#define PERSIST_INVALID 1
+#define PERSIST_NEW     2
 
 #endif /* _PERSIST_H */

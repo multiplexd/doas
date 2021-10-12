@@ -44,42 +44,45 @@
 #define DOAS_PERSIST_TIMEOUT 300 /* Five minutes */
 #endif
 
+
 /* Credit for this function goes to Duncan Overbruck. Flameage for this
    function goes to multiplexd. */
 static int gettsfilename(char *name, size_t namelen) {
     char buf[1024], path[PATH_MAX], *p, *ep;
     const char *errstr;
-    pid_t ppid, sid, leader;
+    pid_t ppid, sid;
     int fd, r, ttynr;
     unsigned long long starttime;
 
-    /* Get the pid of the session leader on our controlling tty */
-
-    if ((fd = open("/dev/tty", O_RDONLY)) == -1)
+    /* Find our session leader, the number of their controlling tty, and their
+       start time. */
+    if ((sid = getsid(0)) == -1)
         return -1;
 
-    r = ioctl(fd, TIOCGSID, &leader);
-    close(fd);
-    if (r == -1) return -1;
-
-    /* Find our tty number and the start time of our tty's session
-       leader. This is a little hairy. */
-    if (snprintf(path, sizeof(path), "/proc/%u/stat", leader) >= sizeof(path))
+    if (snprintf(path, sizeof(path), "/proc/%u/stat", sid) >= sizeof(path))
         return -1;
 
     if ((fd = open(path, O_RDONLY)) == -1)
         return -1;
 
     p = buf;
-    while ((r = read(fd, p, sizeof(buf) - (p - buf))) != 0) {
+    while ((r = read(fd, p, buf + (sizeof(buf) - 1) - p)) != 0) {
         if (r == -1) {
             if (errno == EAGAIN || errno == EINTR)
                 continue;
-            break;
+            close(fd);
+            return -1;
         }
         p += r;
     }
     close(fd);
+
+    /* Discard the buffer if it contains NUL chars, as we can't safely parse it
+       in that case */
+    if (memchr(buf, '\0', p - buf - 1) != NULL)
+        return -1;
+
+    *p = '\0';
 
     /* We parse from the end of the second field by spaces, as the
        second field can itself contain spaces */
@@ -107,105 +110,96 @@ static int gettsfilename(char *name, size_t namelen) {
     }
 
     ppid = getppid();
-    if ((sid = getsid(0)) == -1) return -1;
-
-    if (snprintf(name, namelen, "%d_%d_%d_%llu_%d_%d",
-                 getuid(), ttynr, leader, starttime, ppid, sid) >= namelen) {
+    if (snprintf(name, namelen, "%d_%d_%d_%llu_%d",
+                 getuid(), ttynr, sid, starttime, ppid) >= namelen) {
         return -1;
     }
 
     return 0;
 }
 
-/* Return values: -1 on error, 0 on successful auth file access with
-   valid token, 1 on successful auth file access with invalid auth
-   token. */
-int persist_check(int *authfd) {
+/* Assumes the process has a controlling tty. */
+int persist_check(int *authfd, int *dirfd, char *name, size_t namesz, char *tmp, size_t tmpsz) {
     const char *state_dir = DOAS_STATE_DIR;
+    int fd, sfd;
     struct stat nodeinfo;
-    int dirfd, fd;
-    char tsname[PATH_MAX];
     struct timespec now;
 
-    /* First, attempt to open the state directory and ensure the permissions
-       are valid. */
+    /* Open state directory and verify permissions */
+    if ((sfd = open(state_dir, O_RDONLY | O_DIRECTORY | O_NOFOLLOW)) == -1)
+        return PERSIST_ERROR;
 
-    if ((dirfd = open(state_dir, O_RDONLY | O_DIRECTORY | O_NOFOLLOW)) == -1)
-        return -1;
-
-    if (fstat(dirfd, &nodeinfo) == -1) {
-        close(dirfd);
-        return -1;
-    }
+    if (fstat(sfd, &nodeinfo) == -1)
+        goto closedir;
 
     if (nodeinfo.st_uid != 0 || nodeinfo.st_gid != 0 ||
-        nodeinfo.st_mode != (S_IRWXU | S_IFDIR)) {
-        close(dirfd);
-        return -1;
+        nodeinfo.st_mode != (S_IRWXU | S_IFDIR))
+        goto closedir;
+
+    /* Get the name of the timestamp file */
+    if (gettsfilename(name, namesz) == -1)
+        goto closedir;
+
+    fd = openat(sfd, name, O_RDWR | O_SYNC | O_NOFOLLOW);
+    if (fd == -1) {
+        if (errno == ENOENT) {
+            /* Timestamp file doesn't exist, so create temporary file to be
+               renamed if authentication succeeds */
+
+            if (snprintf(tmp, tmpsz, "tmp.%s.%d", name, getpid()) >= tmpsz)
+                goto closedir;
+
+            fd = openat(sfd, tmp, O_RDWR | O_CREAT | O_SYNC, 0600);
+            if (fd == -1)
+                goto closedir;
+
+            *authfd = fd;
+            *dirfd = sfd;
+            return PERSIST_NEW;
+        } else
+            goto closedir;
     }
 
-    /* Now construct the name of the timestamp file  */
-    if (gettsfilename(tsname, sizeof(tsname)) == -1) {
-        close(dirfd);
-        return -1;
-    }
+    /* Now finished with state directory */
+    close(sfd);
 
-    /* If the token file doesn't exist then create it */
-    fd = openat(dirfd, tsname, O_RDWR | O_SYNC | O_NOFOLLOW);
-    if (fd == -1 && errno == ENOENT) {
-        fd = openat(dirfd, tsname, O_RDWR | O_CREAT | O_SYNC, 0600);
-
-        if (fd == -1) {
-            close(dirfd);
-            return -1;
-        }
-
-        *authfd = fd;
-
-        /* If we had to create the token file then there's no
-           pre-existing auth token that can be valid */
-        close(dirfd);
-        return 1;
-    }
-
-    /* We are now finished with the fd pointing to the state directory */
-    close(dirfd);
-
-    /* Now check the permissions of the token file */
-    if (fstat(fd, &nodeinfo) == -1) {
-        close(fd);
-        return -1;
-    }
+    /* Check permissions of token file */
+    if (fstat(fd, &nodeinfo) == -1)
+        goto closefd;
 
     if (nodeinfo.st_uid != 0 || nodeinfo.st_gid != 0 ||
-        nodeinfo.st_mode != (S_IRUSR | S_IWUSR | S_IFREG)) {
-        close(fd);
-        return -1;
-    }
+        nodeinfo.st_mode != (S_IRUSR | S_IWUSR | S_IFREG))
+        goto closefd;
 
     /* This is a Linuxism. On Linux, CLOCK_MONOTONIC does not run while
        the machine is suspended. */
-    if (clock_gettime(CLOCK_BOOTTIME, &now) == -1) {
-        close(fd);
-        return -1;
-    }
+    if (clock_gettime(CLOCK_BOOTTIME, &now) == -1)
+        goto closefd;
 
     *authfd = fd;
 
     if (now.tv_sec < nodeinfo.st_mtim.tv_sec)
-        /* timestamp is in future, and is thus invalid */
-        return 1;
+        /* Timestamp is in future, and is thus invalid */
+        return PERSIST_INVALID;
 
     if ((now.tv_sec - nodeinfo.st_mtim.tv_sec) > DOAS_PERSIST_TIMEOUT)
-        /* difference between now and the timestamp is greater than the
+        /* Difference between now and the timestamp is greater than the
            configured timeout */
-        return 1;
+        return PERSIST_INVALID;
 
-    /* timestamp is within the timeout */
-    return 0;
+    /* Timestamp is within the timeout */
+    return PERSIST_OK;
+
+closefd:
+    close(fd);
+    return PERSIST_ERROR;
+
+closedir:
+    close(sfd);
+    return PERSIST_ERROR;
 }
 
-void persist_update(int authfd) {
+void persist_update(int fd) {
     struct timespec spec[2];
 
     /* Only update the last modification time */
@@ -215,11 +209,16 @@ void persist_update(int authfd) {
     if (clock_gettime(CLOCK_BOOTTIME, &spec[1]) == -1)
         return;
 
-    (void) futimens(authfd, spec);
-    return;
+    (void) futimens(fd, spec);
+    close(fd);
 }
 
-int persist_remove() {
+void persist_commit(int dirfd, char *from, char *to) {
+    (void) renameat(dirfd, from, dirfd, to);
+    close(dirfd);
+}
+
+int persist_clear() {
     const char *state_dir = DOAS_STATE_DIR;
     struct stat nodeinfo;
     char tsname[PATH_MAX];

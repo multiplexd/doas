@@ -251,13 +251,15 @@ authuser_checkpass(char *myname, char *login_style)
 static void
 authuser(char *myname, char *login_style, int persist)
 {
-	int i, fd = -1, auth = -1, ret = -1;
+	int i, fd = -1;
+	int rv = PERSIST_ERROR, auth = -1, dir = -1;
+	char name[PATH_MAX], tmp[PATH_MAX];
 
 	if (persist)
 		fd = open("/dev/tty", O_RDWR);
 	if (fd != -1) {
-		ret = persist_check(&auth);
-		if (ret == 0)
+		if ((rv = persist_check(&auth, &dir, name,
+		    sizeof(name), tmp, sizeof(tmp))) == PERSIST_OK)
 			goto good;
 	}
 	for (i = 0; i < AUTH_RETRIES; i++) {
@@ -266,9 +268,11 @@ authuser(char *myname, char *login_style, int persist)
 	}
 	exit(1);
 good:
-	if (fd != -1 && ret != -1) {
-		persist_update(auth);
-		close(auth);
+	if (fd != -1) {
+		if (rv != PERSIST_ERROR)
+			persist_update(auth);
+		if (rv == PERSIST_NEW)
+			persist_commit(dir, tmp, name);
 		close(fd);
 	}
 }
@@ -354,7 +358,7 @@ main(int argc, char **argv)
 		case 'L':
 			ret = open("/dev/tty", O_RDWR);
 			if (ret != -1)
-				ret = persist_remove();
+				ret = persist_clear();
 			if (ret == -1)
 			        errx(1, "could not clear auth token");
 			exit(0);
