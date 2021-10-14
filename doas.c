@@ -1,4 +1,4 @@
-/* $OpenBSD: doas.c,v 1.89 2021/01/27 17:02:50 millert Exp $ */
+/* $OpenBSD: doas.c,v 1.92 2021/10/13 17:41:14 millert Exp $ */
 /*
  * Copyright (c) 2015 Ted Unangst <tedu@openbsd.org>
  *
@@ -218,28 +218,16 @@ checkconfig(const char *confpath, int argc, char **argv,
 	}
 }
 
-static void
-authuser(char *myname, char *login_style, int persist)
+static int
+authuser_checkpass(char *myname, char *login_style)
 {
 	(void) login_style;
-	char *challenge	= NULL,	*response, rbuf[1024], cbuf[128];
-	char host[HOST_NAME_MAX	+ 1];
-	int ttyfd = -1;
-	int authfd = -1;
-	int ret	= -1;
-
-	if (persist)
-		ttyfd =	open("/dev/tty", O_RDWR);
-	if (ttyfd != -1) {
-		ret = persist_check(&authfd);
-		if(ret == 0)
-		       goto good;
-	}
+	char *challenge = NULL, *response, rbuf[1024], cbuf[128], host[HOST_NAME_MAX + 1];
 
 	if (gethostname(host, sizeof(host)))
 		snprintf(host, sizeof(host), "?");
 	snprintf(cbuf, sizeof(cbuf),
-		 "\rdoas (%.32s@%.32s) password: ", myname, host);
+	    "\rdoas (%.32s@%.32s) password: ", myname, host);
 	challenge = cbuf;
 
 	response = readpassphrase(challenge, rbuf, sizeof(rbuf),
@@ -253,14 +241,35 @@ authuser(char *myname, char *login_style, int persist)
 		explicit_bzero(rbuf, sizeof(rbuf));
 		syslog(LOG_AUTHPRIV | LOG_NOTICE,
 		    "failed auth for %s", myname);
-		errx(1, "Authentication failed");
+		warnx("Authentication failed");
+		return AUTH_FAILED;
 	}
 	explicit_bzero(rbuf, sizeof(rbuf));
+	return AUTH_OK;
+}
+
+static void
+authuser(char *myname, char *login_style, int persist)
+{
+	int i, fd = -1, auth = -1, ret = -1;
+
+	if (persist)
+		fd = open("/dev/tty", O_RDWR);
+	if (fd != -1) {
+		ret = persist_check(&auth);
+		if (ret == 0)
+			goto good;
+	}
+	for (i = 0; i < AUTH_RETRIES; i++) {
+		if (authuser_checkpass(myname, login_style) == AUTH_OK)
+			goto good;
+	}
+	exit(1);
 good:
-	if (ttyfd != -1	&& ret != -1) {
-		persist_update(authfd);
-		close(authfd);
-		close(ttyfd);
+	if (fd != -1 && ret != -1) {
+		persist_update(auth);
+		close(auth);
+		close(fd);
 	}
 }
 
@@ -441,9 +450,10 @@ main(int argc, char **argv)
 	if (formerpath == NULL)
 		formerpath = "";
 
-	if (unveil(_PATH_LOGIN_CONF, "r") == -1 ||
-	    unveil(_PATH_LOGIN_CONF ".db", "r") == -1)
-		err(1, "unveil");
+	if (unveil(_PATH_LOGIN_CONF, "r") == -1)
+		err(1, "unveil %s", _PATH_LOGIN_CONF);
+	if (unveil(_PATH_LOGIN_CONF ".db", "r") == -1)
+		err(1, "unveil %s.db", _PATH_LOGIN_CONF);
 	if (rule->cmd) {
 		if (setenv("PATH", safepath, 1) == -1)
 			err(1, "failed to set PATH '%s'", safepath);
