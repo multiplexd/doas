@@ -333,7 +333,7 @@ main(int argc, char **argv)
 	uid_t target = 0;
 	gid_t groups[NGROUPS_MAX + 1];
 	int ngroups;
-	int ret, i, ch, rv;
+	int i, ch, rv;
 	int sflag = 0;
 	int nflag = 0;
 	char cwdpath[PATH_MAX];
@@ -356,10 +356,10 @@ main(int argc, char **argv)
 			confpath = optarg;
 			break;
 		case 'L':
-			ret = open("/dev/tty", O_RDWR);
-			if (ret != -1)
-				ret = persist_clear();
-			if (ret == -1)
+			i = open("/dev/tty", O_RDWR);
+			if (i != -1)
+				i = persist_clear();
+			if (i == -1)
 			        errx(1, "could not clear auth token");
 			exit(0);
 		case 'u':
