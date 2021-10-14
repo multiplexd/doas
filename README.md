@@ -124,15 +124,16 @@ post referenced above.
 
 ## License
 
-The source code files `persist.c`, `persist.h`, `shadowauth.c` and `shadowauth.h` are
-Copyright (c) multiplexd; please see the files for license details.
+The source code files `persist.c`, `persist.h`, `shadowauth.c` and
+`shadowauth.h` are Copyright (c) multi; please see the files for license
+details.
 
 All other source code files in the top level directory and the man pages are
-Copyright (c) Ted Unangst with adaptions by multiplexd; please see the files for
+Copyright (c) Ted Unangst with adaptions by multi; please see the files for
 license details.
 
 All files in the [bsd-compat](bsd-compat) directory are Copyright (c) their
-respective authors, with adaptions by multiplexd; please see the individual files
+respective authors, with adaptions by multi; please see the individual files
 for license details.
 
 
