@@ -15,6 +15,7 @@
 
 /* definition for login.conf file path (empty on non-BSD systems) */
 #define _PATH_LOGIN_CONF ""
+#define _PATH_LOGIN_CONF_D ""
 
 /* readpassphrase has its own declarations */
 #include "readpassphrase.h"

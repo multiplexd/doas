@@ -1,4 +1,4 @@
-/* $OpenBSD: doas.c,v 1.92 2021/10/13 17:41:14 millert Exp $ */
+/* $OpenBSD: doas.c,v 1.97 2022/03/22 20:36:49 deraadt Exp $ */
 /*
  * Copyright (c) 2015 Ted Unangst <tedu@openbsd.org>
  *
@@ -191,7 +191,7 @@ parseconfig(const char *filename, int checkperms)
 
 	yyparse();
 	fclose(yyfp);
-	if (parse_errors)
+	if (parse_error)
 		exit(1);
 }
 
@@ -458,6 +458,8 @@ main(int argc, char **argv)
 		err(1, "unveil %s", _PATH_LOGIN_CONF);
 	if (unveil(_PATH_LOGIN_CONF ".db", "r") == -1)
 		err(1, "unveil %s.db", _PATH_LOGIN_CONF);
+	if (unveil(_PATH_LOGIN_CONF_D, "r") == -1)
+		err(1, "unveil %s", _PATH_LOGIN_CONF_D);
 	if (rule->cmd) {
 		if (setenv("PATH", safepath, 1) == -1)
 			err(1, "failed to set PATH '%s'", safepath);
